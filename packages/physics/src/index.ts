@@ -14,3 +14,5 @@ export {
   type BodyEvent,
 } from './world/World';
 export { EventEmitter } from './events/EventEmitter';
+export * from './query';
+export * from './debug';

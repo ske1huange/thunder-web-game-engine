@@ -13,7 +13,19 @@ import {
   warmStartContacts,
 } from '../dynamics/solver/ContactSolver';
 import { SolverContext } from '../dynamics/solver/SolverContext';
+import { type DebugDrawOptions, type DebugDrawer, debugDrawWorld } from '../debug/DebugDraw';
 import { EventEmitter } from '../events/EventEmitter';
+import {
+  type QueryFilter,
+  type RaycastHit,
+  type ShapeCastHit,
+  castShape,
+  overlapShape,
+  queryAABB,
+  raycastAll,
+  raycastClosest,
+} from '../query/Queries';
+import type { Shape } from '../shapes/Shape';
 import { AABB } from '../math/AABB';
 import { Transform } from '../math/Transform';
 import { Vec3 } from '../math/Vec3';
@@ -699,6 +711,59 @@ export class World {
     for (const e of queue) {
       this.events.emit(e.type, e.event as never);
     }
+  }
+
+  // ------------------------------------------------------------------
+  // 查询
+  // ------------------------------------------------------------------
+
+  /** 射线检测，返回最近的命中（direction 无需归一化） */
+  raycast(
+    origin: Readonly<Vec3>,
+    direction: Readonly<Vec3>,
+    maxDistance = Infinity,
+    filter?: QueryFilter,
+  ): RaycastHit | null {
+    return raycastClosest(this.broadPhase, origin, direction, maxDistance, filter);
+  }
+
+  /** 射线检测，返回全部命中（按距离排序） */
+  raycastAll(
+    origin: Readonly<Vec3>,
+    direction: Readonly<Vec3>,
+    maxDistance = Infinity,
+    filter?: QueryFilter,
+  ): RaycastHit[] {
+    return raycastAll(this.broadPhase, origin, direction, maxDistance, filter);
+  }
+
+  /** 查询与 AABB 相交的碰撞体 */
+  queryAABB(aabb: Readonly<AABB>, filter?: QueryFilter): Collider[] {
+    return queryAABB(this.broadPhase, aabb, filter);
+  }
+
+  /** 查询与给定形状重叠的碰撞体 */
+  overlapShape(shape: Shape, transform: Readonly<Transform>, filter?: QueryFilter): Collider[] {
+    return overlapShape(this.broadPhase, shape, transform, filter);
+  }
+
+  /** 形状投射：形状沿 translation 平移，返回最先命中的碰撞体 */
+  castShape(
+    shape: Shape,
+    transform: Readonly<Transform>,
+    translation: Readonly<Vec3>,
+    filter?: QueryFilter,
+  ): ShapeCastHit | null {
+    return castShape(this.broadPhase, shape, transform, translation, filter, this.linearSlop);
+  }
+
+  // ------------------------------------------------------------------
+  // 调试绘制
+  // ------------------------------------------------------------------
+
+  /** 把世界绘制为线段（供渲染端调试显示） */
+  debugDraw(drawer: DebugDrawer, options?: DebugDrawOptions): void {
+    debugDrawWorld(this, drawer, options);
   }
 
   // ------------------------------------------------------------------

@@ -60,7 +60,14 @@ export class FixedJoint extends Joint {
 
   solve(ctx: SolverContext, useBias: boolean): void {
     solveAngularLock(this, this.relativeRotation, this.angularImpulse, ctx, useBias);
-    solvePointConstraint(this, this.localAnchorA, this.localAnchorB, this.linearImpulse, ctx, useBias);
+    solvePointConstraint(
+      this,
+      this.localAnchorA,
+      this.localAnchorB,
+      this.linearImpulse,
+      ctx,
+      useBias,
+    );
   }
 
   getAnchorA(out: Vec3): Vec3 {

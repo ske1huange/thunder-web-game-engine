@@ -87,13 +87,18 @@ function drawCircle(
   }
 }
 
-export function drawCollider(drawer: DebugDrawer, collider: Collider, color = bodyColor(collider)): void {
+export function drawCollider(
+  drawer: DebugDrawer,
+  collider: Collider,
+  color = bodyColor(collider),
+): void {
   const shape = collider.shape;
   const xf = collider.worldTransform;
   switch (shape.type) {
     case ShapeType.Sphere: {
       const origin = c.set(0, 0, 0);
-      for (let axis = 0; axis < 3; axis++) drawCircle(drawer, xf, origin, axis, shape.radius, color);
+      for (let axis = 0; axis < 3; axis++)
+        drawCircle(drawer, xf, origin, axis, shape.radius, color);
       break;
     }
     case ShapeType.Capsule: {
@@ -161,9 +166,18 @@ export function drawAABB(drawer: DebugDrawer, box: Readonly<AABB>, color: number
     [mn.x, mx.y, mx.z],
   ] as const;
   const edges = [
-    [0, 1], [1, 2], [2, 3], [3, 0],
-    [4, 5], [5, 6], [6, 7], [7, 4],
-    [0, 4], [1, 5], [2, 6], [3, 7],
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7],
   ] as const;
   for (const [i, j] of edges) {
     const p = corners[i]!;
@@ -178,11 +192,18 @@ export function debugDrawWorld(
   drawer: DebugDrawer,
   options: DebugDrawOptions = {},
 ): void {
-  const { shapes = true, aabbs = false, contacts = false, joints = true, centerOfMass = false } = options;
+  const {
+    shapes = true,
+    aabbs = false,
+    contacts = false,
+    joints = true,
+    centerOfMass = false,
+  } = options;
   for (const body of world.bodies) {
     for (const collider of body.colliders) {
       if (shapes) drawCollider(drawer, collider);
-      if (aabbs && collider.shape.type !== ShapeType.Plane) drawAABB(drawer, collider.aabb, DebugColors.aabb);
+      if (aabbs && collider.shape.type !== ShapeType.Plane)
+        drawAABB(drawer, collider.aabb, DebugColors.aabb);
     }
     if (centerOfMass && body.isDynamic()) {
       localXf.position.copy(body.center);

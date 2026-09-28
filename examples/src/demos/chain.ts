@@ -16,9 +16,14 @@ export const chain: Demo = {
     const x0 = -4;
     for (let i = 0; i < 20; i++) {
       // 每节沿 X 放置，首尾相接；关节位于相邻两节的连接处
-      const link = world.createBody({ position: v(x0 + linkHalf + i * 2 * linkHalf, 12, 0), rotation: lying });
+      const link = world.createBody({
+        position: v(x0 + linkHalf + i * 2 * linkHalf, 12, 0),
+        rotation: lying,
+      });
       link.addCollider({ shape: new CapsuleShape(0.08, linkHalf), density: 2 });
-      world.addJoint(new BallSocketJoint({ bodyA: prev, bodyB: link, anchor: v(x0 + i * 2 * linkHalf, 12, 0) }));
+      world.addJoint(
+        new BallSocketJoint({ bodyA: prev, bodyB: link, anchor: v(x0 + i * 2 * linkHalf, 12, 0) }),
+      );
       prev = link;
     }
     const endX = x0 + 20 * 2 * linkHalf;
@@ -31,7 +36,9 @@ export const chain: Demo = {
     const z = 6;
     const startX = -4;
     const y = 4;
-    const left = addBox(world, v(startX - 0.5, y / 2, z), v(0.5, y / 2, 1.2), { body: { type: 'static' } });
+    const left = addBox(world, v(startX - 0.5, y / 2, z), v(0.5, y / 2, 1.2), {
+      body: { type: 'static' },
+    });
     let prevBody = left;
     for (let i = 0; i < planks; i++) {
       const x = startX + plankHalf + i * 2 * plankHalf;
@@ -47,9 +54,14 @@ export const chain: Demo = {
       prevBody = plank;
     }
     const endPost = startX + planks * 2 * plankHalf;
-    const right = addBox(world, v(endPost + 0.5, y / 2, z), v(0.5, y / 2, 1.2), { body: { type: 'static' } });
-    world.addJoint(new HingeJoint({ bodyA: prevBody, bodyB: right, anchor: v(endPost, y, z), axis: v(0, 0, 1) }));
-    for (let i = 0; i < 5; i++) addBox(world, v(startX + 1.5 + i * 0.8, y + 1 + i, z), v(0.25, 0.25, 0.25));
+    const right = addBox(world, v(endPost + 0.5, y / 2, z), v(0.5, y / 2, 1.2), {
+      body: { type: 'static' },
+    });
+    world.addJoint(
+      new HingeJoint({ bodyA: prevBody, bodyB: right, anchor: v(endPost, y, z), axis: v(0, 0, 1) }),
+    );
+    for (let i = 0; i < 5; i++)
+      addBox(world, v(startX + 1.5 + i * 0.8, y + 1 + i, z), v(0.25, 0.25, 0.25));
     setInfo('拖拽重球或桥上的箱子试试。');
   },
 };

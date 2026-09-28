@@ -2,7 +2,13 @@ import type { AABB } from '../math/AABB';
 import type { Transform } from '../math/Transform';
 import { Vec3 } from '../math/Vec3';
 import { ConvexPolyhedron } from './ConvexPolyhedron';
-import { type MassProperties, Shape, type ShapeRayHit, ShapeType, raycastPolyhedron } from './Shape';
+import {
+  type MassProperties,
+  Shape,
+  type ShapeRayHit,
+  ShapeType,
+  raycastPolyhedron,
+} from './Shape';
 
 /** 长方体（半边长） */
 export class BoxShape extends Shape {

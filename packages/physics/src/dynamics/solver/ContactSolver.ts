@@ -97,9 +97,57 @@ export function prepareContacts(contacts: readonly Contact[], ctx: SolverContext
       p.baseSeparation =
         p.separation - ((rB.x - rA.x) * n.x + (rB.y - rA.y) * n.y + (rB.z - rA.z) * n.z);
       const j = p.jacobian;
-      p.normalMass = writeAxis(j, 0, rA.x, rA.y, rA.z, rB.x, rB.y, rB.z, n.x, n.y, n.z, IA, IB, mA, mB);
-      p.tangentMass1 = writeAxis(j, T1, rA.x, rA.y, rA.z, rB.x, rB.y, rB.z, t1.x, t1.y, t1.z, IA, IB, mA, mB);
-      p.tangentMass2 = writeAxis(j, T2, rA.x, rA.y, rA.z, rB.x, rB.y, rB.z, t2.x, t2.y, t2.z, IA, IB, mA, mB);
+      p.normalMass = writeAxis(
+        j,
+        0,
+        rA.x,
+        rA.y,
+        rA.z,
+        rB.x,
+        rB.y,
+        rB.z,
+        n.x,
+        n.y,
+        n.z,
+        IA,
+        IB,
+        mA,
+        mB,
+      );
+      p.tangentMass1 = writeAxis(
+        j,
+        T1,
+        rA.x,
+        rA.y,
+        rA.z,
+        rB.x,
+        rB.y,
+        rB.z,
+        t1.x,
+        t1.y,
+        t1.z,
+        IA,
+        IB,
+        mA,
+        mB,
+      );
+      p.tangentMass2 = writeAxis(
+        j,
+        T2,
+        rA.x,
+        rA.y,
+        rA.z,
+        rB.x,
+        rB.y,
+        rB.z,
+        t2.x,
+        t2.y,
+        t2.z,
+        IA,
+        IB,
+        mA,
+        mB,
+      );
       // 求解前的相对法向速度（用于弹性）
       p.relativeVelocity =
         n.x * (vB.x - vA.x) +
@@ -228,7 +276,10 @@ export function solveContacts(
       const prBy = rB.y + qB.w * ty + (qB.z * tx - qB.x * tz);
       const prBz = rB.z + qB.w * tz + (qB.x * ty - qB.y * tx);
       const s =
-        (dpx + prBx - prAx) * nx + (dpy + prBy - prAy) * ny + (dpz + prBz - prAz) * nz + p.baseSeparation;
+        (dpx + prBx - prAx) * nx +
+        (dpy + prBy - prAy) * ny +
+        (dpz + prBz - prAz) * nz +
+        p.baseSeparation;
 
       let velocityBias = 0;
       let massScale = 1;
@@ -251,7 +302,8 @@ export function solveContacts(
         j[N_RA]! * wAx -
         j[N_RA + 1]! * wAy -
         j[N_RA + 2]! * wAz;
-      let impulse = -p.normalMass * massScale * (vn + velocityBias) - impulseScale * p.normalImpulse;
+      let impulse =
+        -p.normalMass * massScale * (vn + velocityBias) - impulseScale * p.normalImpulse;
       const newImpulse = Math.max(p.normalImpulse + impulse, 0);
       impulse = newImpulse - p.normalImpulse;
       p.normalImpulse = newImpulse;

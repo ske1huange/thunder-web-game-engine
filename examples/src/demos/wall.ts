@@ -13,7 +13,11 @@ export const wall: Demo = {
     for (let row = 0; row < n; row++) {
       const offset = row % 2 === 0 ? 0 : hx;
       for (let i = 0; i < n; i++) {
-        addBox(world, v((i - n / 2) * 2 * hx + offset, hy + row * 2 * hy, 0), v(hx - 0.005, hy, 0.3));
+        addBox(
+          world,
+          v((i - n / 2) * 2 * hx + offset, hy + row * 2 * hy, 0),
+          v(hx - 0.005, hy, 0.3),
+        );
       }
     }
     setInfo('右上角可以查看每步耗时。');

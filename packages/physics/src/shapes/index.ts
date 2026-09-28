@@ -1,5 +1,10 @@
 export { ShapeType, Shape, MassProperties, type ShapeRayHit } from './Shape';
-export { ConvexPolyhedron, computeConvexHull, type PolyFace, type PolyEdge } from './ConvexPolyhedron';
+export {
+  ConvexPolyhedron,
+  computeConvexHull,
+  type PolyFace,
+  type PolyEdge,
+} from './ConvexPolyhedron';
 export { SphereShape } from './SphereShape';
 export { CapsuleShape } from './CapsuleShape';
 export { BoxShape } from './BoxShape';

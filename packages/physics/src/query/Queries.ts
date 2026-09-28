@@ -150,7 +150,8 @@ export function overlapShape(
   broadPhase.query(shapeAabb, (collider) => {
     if (!passesFilter(collider, filter)) return true;
     if (!collider.aabb.overlaps(shapeAabb)) return true;
-    if (testOverlap(shape, transform, collider.shape, collider.worldTransform)) result.push(collider);
+    if (testOverlap(shape, transform, collider.shape, collider.worldTransform))
+      result.push(collider);
     return true;
   });
   return result;
@@ -180,7 +181,18 @@ export function castShape(
   let maxT = 1;
   broadPhase.query(sweepAabb, (collider) => {
     if (!passesFilter(collider, filter)) return true;
-    if (shapeCast(shape, transform, translation, collider.shape, collider.worldTransform, maxT, linearSlop, castOut)) {
+    if (
+      shapeCast(
+        shape,
+        transform,
+        translation,
+        collider.shape,
+        collider.worldTransform,
+        maxT,
+        linearSlop,
+        castOut,
+      )
+    ) {
       if (!best || castOut.t < best.fraction) {
         maxT = castOut.t;
         best = {

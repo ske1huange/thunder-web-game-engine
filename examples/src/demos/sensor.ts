@@ -33,9 +33,10 @@ export const sensor: Demo = {
       timer += dt;
       if (timer > 0.4) {
         timer = 0;
-        const b = rand() < 0.5
-          ? addSphere(world, v(-9, 6, (rand() - 0.5) * 2), 0.25 + rand() * 0.2, { friction: 0.3 })
-          : addBox(world, v(-9, 6, (rand() - 0.5) * 2), v(0.25, 0.25, 0.25), { friction: 0.2 });
+        const b =
+          rand() < 0.5
+            ? addSphere(world, v(-9, 6, (rand() - 0.5) * 2), 0.25 + rand() * 0.2, { friction: 0.3 })
+            : addBox(world, v(-9, 6, (rand() - 0.5) * 2), v(0.25, 0.25, 0.25), { friction: 0.2 });
         balls.push(b);
       }
       for (let i = balls.length - 1; i >= 0; i--) {

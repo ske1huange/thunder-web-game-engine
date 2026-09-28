@@ -16,17 +16,7 @@ export class Mat3 {
   m21: number;
   m22: number;
 
-  constructor(
-    m00 = 1,
-    m01 = 0,
-    m02 = 0,
-    m10 = 0,
-    m11 = 1,
-    m12 = 0,
-    m20 = 0,
-    m21 = 0,
-    m22 = 1,
-  ) {
+  constructor(m00 = 1, m01 = 0, m02 = 0, m10 = 0, m11 = 1, m12 = 0, m20 = 0, m21 = 0, m22 = 1) {
     this.m00 = m00;
     this.m01 = m01;
     this.m02 = m02;

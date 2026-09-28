@@ -121,7 +121,10 @@ export class ConvexPolyhedron {
         a.subVectors(v0, ref);
         b.subVectors(this.vertices[idx[i]!]!, ref);
         c.subVectors(this.vertices[idx[i + 1]!]!, ref);
-        const det = a.x * (b.y * c.z - b.z * c.y) - a.y * (b.x * c.z - b.z * c.x) + a.z * (b.x * c.y - b.y * c.x);
+        const det =
+          a.x * (b.y * c.z - b.z * c.y) -
+          a.y * (b.x * c.z - b.z * c.x) +
+          a.z * (b.x * c.y - b.y * c.x);
         const vol = det / 6;
         volume += vol;
         center.x += (vol * (a.x + b.x + c.x)) / 4;
@@ -276,7 +279,12 @@ export function computeConvexHull(input: readonly Readonly<Vec3>[]): {
     tris.push({ a, b, c, n: nn, d: nn.dot(pa), alive: true });
   };
   // 保证初始四面体各面朝外
-  const above = tmp.subVectors(pts[i3]!, pts[i0]!).dot(new Vec3().subVectors(pts[i1]!, pts[i0]!).cross(new Vec3().subVectors(pts[i2]!, pts[i0]!))) > 0;
+  const above =
+    tmp
+      .subVectors(pts[i3]!, pts[i0]!)
+      .dot(
+        new Vec3().subVectors(pts[i1]!, pts[i0]!).cross(new Vec3().subVectors(pts[i2]!, pts[i0]!)),
+      ) > 0;
   if (above) {
     addTri(i0, i2, i1);
     addTri(i0, i1, i3);

@@ -23,7 +23,10 @@ export const DEFAULT_FILTER: Readonly<CollisionFilter> = Object.freeze({
   group: 0,
 });
 
-export function shouldFiltersCollide(a: Readonly<CollisionFilter>, b: Readonly<CollisionFilter>): boolean {
+export function shouldFiltersCollide(
+  a: Readonly<CollisionFilter>,
+  b: Readonly<CollisionFilter>,
+): boolean {
   if (a.group === b.group && a.group !== 0) return a.group > 0;
   return (a.categoryBits & b.maskBits) !== 0 && (b.categoryBits & a.maskBits) !== 0;
 }

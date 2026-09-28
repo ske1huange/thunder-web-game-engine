@@ -104,7 +104,12 @@ class SimplexVertex {
 }
 
 const verts = [new SimplexVertex(), new SimplexVertex(), new SimplexVertex(), new SimplexVertex()];
-const scratch = [new SimplexVertex(), new SimplexVertex(), new SimplexVertex(), new SimplexVertex()];
+const scratch = [
+  new SimplexVertex(),
+  new SimplexVertex(),
+  new SimplexVertex(),
+  new SimplexVertex(),
+];
 let count = 0;
 
 const tmpA = new Vec3();
@@ -184,11 +189,7 @@ function closestOnTriangle(a: Vec3, b: Vec3, c: Vec3, w: number[]): number {
   w[0] = 1 - v - ww;
   w[1] = v;
   w[2] = ww;
-  return tmpC
-    .copy(a)
-    .addScaled(ab, v)
-    .addScaled(ac, ww)
-    .lengthSq();
+  return tmpC.copy(a).addScaled(ab, v).addScaled(ac, ww).lengthSq();
 }
 
 function closestOnSegmentWeights(a: Vec3, b: Vec3): { t: number; d2: number } {

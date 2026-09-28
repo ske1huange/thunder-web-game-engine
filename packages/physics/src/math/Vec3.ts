@@ -197,7 +197,9 @@ export class Vec3 {
 
   equals(v: Readonly<Vec3>, eps = 0): boolean {
     return (
-      Math.abs(this.x - v.x) <= eps && Math.abs(this.y - v.y) <= eps && Math.abs(this.z - v.z) <= eps
+      Math.abs(this.x - v.x) <= eps &&
+      Math.abs(this.y - v.y) <= eps &&
+      Math.abs(this.z - v.z) <= eps
     );
   }
 

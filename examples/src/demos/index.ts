@@ -9,5 +9,15 @@ import { shapes } from './shapes';
 import type { Demo } from './types';
 import { wall } from './wall';
 
-export const demos: Demo[] = [pyramid, dominoes, chain, ragdoll, machines, raycast, sensor, shapes, wall];
+export const demos: Demo[] = [
+  pyramid,
+  dominoes,
+  chain,
+  ragdoll,
+  machines,
+  raycast,
+  sensor,
+  shapes,
+  wall,
+];
 export type { Demo } from './types';

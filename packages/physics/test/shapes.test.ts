@@ -35,13 +35,17 @@ function numericMass(inside: (p: Vec3) => boolean, half: Vec3, n = 64) {
   let ixx = 0,
     iyy = 0,
     izz = 0;
-  const cell = new Vec3(half.x * 2 / n, half.y * 2 / n, half.z * 2 / n);
+  const cell = new Vec3((half.x * 2) / n, (half.y * 2) / n, (half.z * 2) / n);
   const dv = cell.x * cell.y * cell.z;
   const p = new Vec3();
   for (let i = 0; i < n; i++)
     for (let j = 0; j < n; j++)
       for (let k = 0; k < n; k++) {
-        p.set(-half.x + (i + 0.5) * cell.x, -half.y + (j + 0.5) * cell.y, -half.z + (k + 0.5) * cell.z);
+        p.set(
+          -half.x + (i + 0.5) * cell.x,
+          -half.y + (j + 0.5) * cell.y,
+          -half.z + (k + 0.5) * cell.z,
+        );
         if (!inside(p)) continue;
         count++;
         ixx += p.y * p.y + p.z * p.z;
@@ -82,7 +86,8 @@ describe('ConvexPolyhedron', () => {
 
   it('凸包：去除内部点与重复点，并合并共面三角形', () => {
     const pts: Vec3[] = [];
-    for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) pts.push(new Vec3(x, y, z));
+    for (const x of [-1, 1])
+      for (const y of [-1, 1]) for (const z of [-1, 1]) pts.push(new Vec3(x, y, z));
     pts.push(new Vec3(0, 0, 0), new Vec3(0.5, -0.2, 0.1), new Vec3(1, 1, 1), new Vec3(1, 0, 0));
     const hull = ConvexPolyhedron.fromPoints(pts);
     expect(hull.vertices.length).toBe(8);
@@ -112,7 +117,12 @@ describe('ConvexPolyhedron', () => {
 
   it('退化点集抛出异常', () => {
     expect(() =>
-      ConvexPolyhedron.fromPoints([new Vec3(0, 0, 0), new Vec3(1, 0, 0), new Vec3(0, 1, 0), new Vec3(1, 1, 0)]),
+      ConvexPolyhedron.fromPoints([
+        new Vec3(0, 0, 0),
+        new Vec3(1, 0, 0),
+        new Vec3(0, 1, 0),
+        new Vec3(1, 1, 0),
+      ]),
     ).toThrow();
   });
 });
@@ -128,10 +138,14 @@ describe('质量属性', () => {
   it('胶囊体与数值积分一致', () => {
     const cap = new CapsuleShape(0.5, 1);
     const m = cap.computeMass(1, new MassProperties());
-    const num = numericMass((p) => {
-      const y = Math.max(-1, Math.min(1, p.y));
-      return p.x * p.x + (p.y - y) ** 2 + p.z * p.z <= 0.25;
-    }, new Vec3(0.5, 1.5, 0.5), 96);
+    const num = numericMass(
+      (p) => {
+        const y = Math.max(-1, Math.min(1, p.y));
+        return p.x * p.x + (p.y - y) ** 2 + p.z * p.z <= 0.25;
+      },
+      new Vec3(0.5, 1.5, 0.5),
+      96,
+    );
     expect(m.mass).toBeCloseTo(num.mass, 2);
     expect(Math.abs(m.inertia.m00 - num.ixx) / num.ixx).toBeLessThan(0.01);
     expect(Math.abs(m.inertia.m11 - num.iyy) / num.iyy).toBeLessThan(0.01);
@@ -148,7 +162,9 @@ describe('质量属性', () => {
   });
 
   it('偏心凸包的质心', () => {
-    const pts = ConvexPolyhedron.fromBox(1, 1, 1).vertices.map((v) => v.clone().add(new Vec3(3, 0, 0)));
+    const pts = ConvexPolyhedron.fromBox(1, 1, 1).vertices.map((v) =>
+      v.clone().add(new Vec3(3, 0, 0)),
+    );
     const m = new ConvexHullShape(pts).computeMass(2, new MassProperties());
     expect(m.mass).toBeCloseTo(16, 10);
     expect(m.center.equals(new Vec3(3, 0, 0), 1e-9)).toBe(true);
@@ -159,7 +175,10 @@ describe('质量属性', () => {
 describe('包围盒', () => {
   it('旋转长方体', () => {
     const box = new BoxShape(new Vec3(1, 2, 3));
-    const t = new Transform(new Vec3(5, 0, 0), new Quat().setFromAxisAngle(new Vec3(0, 0, 1), Math.PI / 2));
+    const t = new Transform(
+      new Vec3(5, 0, 0),
+      new Quat().setFromAxisAngle(new Vec3(0, 0, 1), Math.PI / 2),
+    );
     const aabb = box.computeAABB(t, new AABB());
     expect(aabb.min.equals(new Vec3(3, -1, -3), 1e-9)).toBe(true);
     expect(aabb.max.equals(new Vec3(7, 1, 3), 1e-9)).toBe(true);
@@ -171,7 +190,12 @@ describe('包围盒', () => {
       new CapsuleShape(0.3, 0.8),
       new BoxShape(new Vec3(0.2, 0.4, 0.6)),
       new CylinderShape(0.5, 0.5),
-      new ConvexHullShape([new Vec3(0, 0, 0), new Vec3(1, 0, 0), new Vec3(0, 1, 0), new Vec3(0, 0, 1)]),
+      new ConvexHullShape([
+        new Vec3(0, 0, 0),
+        new Vec3(1, 0, 0),
+        new Vec3(0, 1, 0),
+        new Vec3(0, 0, 1),
+      ]),
     ];
     const t = new Transform(new Vec3(1, 2, 3), new Quat().setFromEuler(0.3, 0.7, -0.2));
     const p = new Vec3();

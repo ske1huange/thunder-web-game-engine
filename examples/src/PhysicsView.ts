@@ -31,7 +31,11 @@ export class PhysicsView {
 
   constructor(private readonly world: World) {}
 
-  private material(color: number, sleeping: boolean, transparent = false): THREE.MeshStandardMaterial {
+  private material(
+    color: number,
+    sleeping: boolean,
+    transparent = false,
+  ): THREE.MeshStandardMaterial {
     const key = `${color}-${sleeping}-${transparent}`;
     let m = this.materials.get(key);
     if (!m) {
@@ -73,7 +77,12 @@ export class PhysicsView {
       }
       case ShapeType.Cylinder: {
         const c = shape as CylinderShape;
-        return new THREE.CylinderGeometry(c.cylinderRadius, c.cylinderRadius, c.halfHeight * 2, c.segments);
+        return new THREE.CylinderGeometry(
+          c.cylinderRadius,
+          c.cylinderRadius,
+          c.halfHeight * 2,
+          c.segments,
+        );
       }
       case ShapeType.ConvexHull: {
         const hull = shape.hull!;

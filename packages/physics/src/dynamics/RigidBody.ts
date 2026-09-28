@@ -275,7 +275,13 @@ export class RigidBody {
       // 用局部包围盒估计
       c.shape.computeAABB(c.localTransform, bodyLocalAabb);
       const ext = bodyLocalAabb.getExtents(tmpV);
-      minExtent = Math.min(minExtent, ext.x, ext.y, ext.z, c.shape.radius > 0 ? c.shape.radius : Infinity);
+      minExtent = Math.min(
+        minExtent,
+        ext.x,
+        ext.y,
+        ext.z,
+        c.shape.radius > 0 ? c.shape.radius : Infinity,
+      );
       for (const s of [bodyLocalAabb.min, bodyLocalAabb.max]) {
         maxExtent = Math.max(maxExtent, tmpV2.subVectors(s, this.localCenter).length());
       }

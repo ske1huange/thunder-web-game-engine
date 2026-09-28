@@ -130,7 +130,10 @@ let dragJoint: MouseJoint | null = null;
 
 function updatePointer(e: PointerEvent): void {
   const rect = renderer.domElement.getBoundingClientRect();
-  pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  pointer.set(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1,
+  );
   raycaster.setFromCamera(pointer, camera);
 }
 
@@ -152,7 +155,10 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
     }),
   );
   const normal = camera.getWorldDirection(new THREE.Vector3()).negate();
-  dragPlane.setFromNormalAndCoplanarPoint(normal, new THREE.Vector3(hit.point.x, hit.point.y, hit.point.z));
+  dragPlane.setFromNormalAndCoplanarPoint(
+    normal,
+    new THREE.Vector3(hit.point.x, hit.point.y, hit.point.z),
+  );
   renderer.domElement.setPointerCapture(e.pointerId);
 });
 

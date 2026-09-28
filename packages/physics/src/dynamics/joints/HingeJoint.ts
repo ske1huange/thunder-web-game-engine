@@ -305,7 +305,14 @@ export class HingeJoint extends Joint {
     }
 
     // ---- 点约束 ----
-    solvePointConstraint(this, this.localAnchorA, this.localAnchorB, this.linearImpulse, ctx, useBias);
+    solvePointConstraint(
+      this,
+      this.localAnchorA,
+      this.localAnchorB,
+      this.linearImpulse,
+      ctx,
+      useBias,
+    );
   }
 
   getAnchorA(out: Vec3): Vec3 {

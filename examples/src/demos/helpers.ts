@@ -27,7 +27,12 @@ export function addBox(world: World, position: Vec3, half: Vec3, extra: Extra = 
   return b;
 }
 
-export function addSphere(world: World, position: Vec3, radius: number, extra: Extra = {}): RigidBody {
+export function addSphere(
+  world: World,
+  position: Vec3,
+  radius: number,
+  extra: Extra = {},
+): RigidBody {
   const { body, ...collider } = extra;
   const b = world.createBody({ ...body, position });
   b.addCollider({ shape: new SphereShape(radius), ...collider });

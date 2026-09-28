@@ -229,7 +229,10 @@ describe('过滤、运动学与连续碰撞', () => {
   it('碰撞过滤：mask 不匹配时穿过地面', () => {
     const world = new World();
     const ground = world.createBody({ type: 'static' });
-    ground.addCollider({ shape: new BoxShape(new Vec3(5, 0.5, 5)), filter: { categoryBits: 0b01 } });
+    ground.addCollider({
+      shape: new BoxShape(new Vec3(5, 0.5, 5)),
+      filter: { categoryBits: 0b01 },
+    });
     const ghost = world.createBody({ position: new Vec3(0, 2, 0) });
     ghost.addCollider({ shape: new SphereShape(0.5), filter: { maskBits: 0b10 } });
     const solid = world.createBody({ position: new Vec3(2, 2, 0) });
@@ -250,7 +253,10 @@ describe('过滤、运动学与连续碰撞', () => {
     const world = new World({ gravity: new Vec3(0, 0, 0) });
     const wall = world.createBody({ type: 'static', position: new Vec3(5, 0, 0) });
     wall.addCollider({ shape: new BoxShape(new Vec3(0.05, 2, 2)) });
-    const bullet = world.createBody({ position: new Vec3(0, 0, 0), linearVelocity: new Vec3(300, 0, 0) });
+    const bullet = world.createBody({
+      position: new Vec3(0, 0, 0),
+      linearVelocity: new Vec3(300, 0, 0),
+    });
     bullet.addCollider({ shape: new SphereShape(0.05) });
     run(world, 10);
     expect(bullet.position.x).toBeLessThan(5);
@@ -264,7 +270,10 @@ describe('过滤、运动学与连续碰撞', () => {
       linearVelocity: new Vec3(10, 0, 0),
     });
     puck.addCollider({ shape: new SphereShape(0.05), friction: 0 });
-    const tail = world.createBody({ position: new Vec3(-0.2, 0.05, 0), linearVelocity: new Vec3(10, 0, 0) });
+    const tail = world.createBody({
+      position: new Vec3(-0.2, 0.05, 0),
+      linearVelocity: new Vec3(10, 0, 0),
+    });
     tail.addCollider({ shape: new SphereShape(0.05), friction: 0 });
     run(world, 30);
     expect(puck.position.x).toBeGreaterThan(4.5);

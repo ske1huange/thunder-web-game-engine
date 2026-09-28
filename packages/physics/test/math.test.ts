@@ -75,7 +75,9 @@ describe('Quat', () => {
     const u = new Quat().setFromUnitVectors(new Vec3(1, 0, 0), new Vec3(0, 0, -1));
     expect(u.rotate(new Vec3(1, 0, 0), new Vec3()).equals(new Vec3(0, 0, -1), EPS)).toBe(true);
     const opposite = new Quat().setFromUnitVectors(new Vec3(0, 1, 0), new Vec3(0, -1, 0));
-    expect(opposite.rotate(new Vec3(0, 1, 0), new Vec3()).equals(new Vec3(0, -1, 0), EPS)).toBe(true);
+    expect(opposite.rotate(new Vec3(0, 1, 0), new Vec3()).equals(new Vec3(0, -1, 0), EPS)).toBe(
+      true,
+    );
   });
 
   it('slerp', () => {
@@ -115,7 +117,9 @@ describe('Mat3', () => {
     const skew = new Mat3().setSkew(new Vec3(1, 2, 3));
     const u = new Vec3(-1, 0.5, 2);
     expect(
-      skew.transformVector(u, new Vec3()).equals(new Vec3().crossVectors(new Vec3(1, 2, 3), u), EPS),
+      skew
+        .transformVector(u, new Vec3())
+        .equals(new Vec3().crossVectors(new Vec3(1, 2, 3), u), EPS),
     ).toBe(true);
   });
 });

@@ -29,7 +29,12 @@ function sphere(world: World, pos: Vec3, r = 0.1): RigidBody {
   return b;
 }
 
-function box(world: World, pos: Vec3, half: Vec3, type: 'dynamic' | 'static' = 'dynamic'): RigidBody {
+function box(
+  world: World,
+  pos: Vec3,
+  half: Vec3,
+  type: 'dynamic' | 'static' = 'dynamic',
+): RigidBody {
   const b = world.createBody({ position: pos, type });
   b.addCollider({ shape: new BoxShape(half) });
   return b;
@@ -79,7 +84,8 @@ describe('BallSocketJoint', () => {
       const b = new Vec3();
       let maxError = 0;
       run(world, 600, () => {
-        for (const j of joints) maxError = Math.max(maxError, j.getAnchorA(a).distanceTo(j.getAnchorB(b)));
+        for (const j of joints)
+          maxError = Math.max(maxError, j.getAnchorA(a).distanceTo(j.getAnchorB(b)));
       });
       if (vertical) {
         expect(maxError).toBeLessThan(0.003);
@@ -149,7 +155,12 @@ describe('HingeJoint', () => {
     const frame = world.createBody({ type: 'static', position: new Vec3(0, 3, 0) });
     const arm = box(world, new Vec3(1, 3, 0), new Vec3(1, 0.1, 0.1));
     const hinge = world.addJoint(
-      new HingeJoint({ bodyA: frame, bodyB: arm, anchor: new Vec3(0, 3, 0), axis: new Vec3(0, 0, 1) }),
+      new HingeJoint({
+        bodyA: frame,
+        bodyB: arm,
+        anchor: new Vec3(0, 3, 0),
+        axis: new Vec3(0, 0, 1),
+      }),
     );
     const axisWorld = new Vec3();
     run(world, 240, () => {
@@ -165,7 +176,9 @@ describe('DistanceJoint', () => {
     const world = new World({ enableSleep: false });
     const a = world.createBody({ type: 'static', position: new Vec3(0, 5, 0) });
     const b = sphere(world, new Vec3(1.5, 5, 0));
-    const joint = world.addJoint(new DistanceJoint({ bodyA: a, bodyB: b, anchorA: a.position, anchorB: b.position }));
+    const joint = world.addJoint(
+      new DistanceJoint({ bodyA: a, bodyB: b, anchorA: a.position, anchorB: b.position }),
+    );
     let maxErr = 0;
     run(world, 240, () => {
       maxErr = Math.max(maxErr, Math.abs(joint.getCurrentLength() - 1.5));
@@ -270,7 +283,12 @@ describe('MouseJoint 与碰撞设置', () => {
     ground.addCollider({ shape: new PlaneShape() });
     const b = box(world, new Vec3(0, 0.5, 0), new Vec3(0.5, 0.5, 0.5));
     const mouse = world.addJoint(
-      new MouseJoint({ bodyA: ground, bodyB: b, anchor: new Vec3(0, 0.5, 0), target: new Vec3(0, 3, 0) }),
+      new MouseJoint({
+        bodyA: ground,
+        bodyB: b,
+        anchor: new Vec3(0, 0.5, 0),
+        target: new Vec3(0, 3, 0),
+      }),
     );
     run(world, 120);
     expect(b.position.y).toBeGreaterThan(2.8);
@@ -286,7 +304,9 @@ describe('MouseJoint 与碰撞设置', () => {
     const world = new World({ gravity: new Vec3(0, 0, 0) });
     const a = box(world, new Vec3(0, 0, 0), new Vec3(0.5, 0.5, 0.5));
     const b = box(world, new Vec3(0.8, 0, 0), new Vec3(0.5, 0.5, 0.5));
-    const joint = world.addJoint(new BallSocketJoint({ bodyA: a, bodyB: b, anchor: new Vec3(0.4, 0, 0) }));
+    const joint = world.addJoint(
+      new BallSocketJoint({ bodyA: a, bodyB: b, anchor: new Vec3(0.4, 0, 0) }),
+    );
     run(world, 10);
     expect(world.stats.touchingContacts).toBe(0);
     world.removeJoint(joint);

@@ -109,7 +109,8 @@ export class ContactBuffer {
   reduceInto(manifold: Manifold, normal: Readonly<Vec3>): void {
     const n = this.count;
     if (n <= MAX_MANIFOLD_POINTS) {
-      for (let i = 0; i < n; i++) manifold.addPoint(this.points[i]!, this.separations[i]!, this.ids[i]!);
+      for (let i = 0; i < n; i++)
+        manifold.addPoint(this.points[i]!, this.separations[i]!, this.ids[i]!);
       return;
     }
     const pts = this.points;

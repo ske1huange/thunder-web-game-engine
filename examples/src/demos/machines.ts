@@ -1,10 +1,4 @@
-import {
-  BoxShape,
-  DistanceJoint,
-  HingeJoint,
-  SliderJoint,
-  Vec3,
-} from '@thunder/physics';
+import { BoxShape, DistanceJoint, HingeJoint, SliderJoint, Vec3 } from '@thunder/physics';
 import type { Demo } from './types';
 import { addBox, addSphere, v } from './helpers';
 
@@ -49,7 +43,8 @@ export const machines: Demo = {
         maxMotorForce: 2000,
       }),
     );
-    for (let i = 0; i < 4; i++) addBox(world, v(-1.5 + (i % 2), 0.8 + Math.floor(i / 2) * 0.6, 0), v(0.25, 0.25, 0.25));
+    for (let i = 0; i < 4; i++)
+      addBox(world, v(-1.5 + (i % 2), 0.8 + Math.floor(i / 2) * 0.6, 0), v(0.25, 0.25, 0.25));
 
     // ---- 弹簧悬挂平台 ----
     const frame = world.createBody({ type: 'static', position: v(4, 7, 0) });
@@ -72,7 +67,8 @@ export const machines: Demo = {
         }),
       );
     }
-    for (let i = 0; i < 5; i++) addBox(world, v(3.5 + (i % 2) * 0.8, 5 + i * 0.7, 0), v(0.3, 0.3, 0.3));
+    for (let i = 0; i < 5; i++)
+      addBox(world, v(3.5 + (i % 2) * 0.8, 5 + i * 0.7, 0), v(0.3, 0.3, 0.3));
 
     // ---- 门：限制 + 回位弹簧 ----
     const doorFrame = addBox(world, v(8, 1.5, 0), v(0.1, 1.5, 0.1), { body: { type: 'static' } });
@@ -92,7 +88,9 @@ export const machines: Demo = {
       }),
     );
 
-    setInfo('风车由铰链马达驱动；电梯每 3 秒换向；平台由 4 根弹簧（距离关节）吊着；拖拽门会自动回位。');
+    setInfo(
+      '风车由铰链马达驱动；电梯每 3 秒换向；平台由 4 根弹簧（距离关节）吊着；拖拽门会自动回位。',
+    );
     let direction = 1;
     let timer = 0;
     return (dt) => {

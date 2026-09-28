@@ -338,7 +338,8 @@ export class World {
 
   /** @internal */
   assertUnlocked(): void {
-    if (this.locked) throw new Error('World 正在 step 中，不能修改（请在事件回调之外或 step 之后修改）');
+    if (this.locked)
+      throw new Error('World 正在 step 中，不能修改（请在事件回调之外或 step 之后修改）');
   }
 
   get isLocked(): boolean {
@@ -435,7 +436,7 @@ export class World {
     ctx.maxBiasVelocity = this.contactPushMaxVelocity;
     ctx.restitutionThreshold = this.restitutionThreshold;
     ctx.enableWarmStarting = this.enableWarmStarting;
-    const contactHertz = Math.min(this.contactHertz, 0.25 * subSteps / dt);
+    const contactHertz = Math.min(this.contactHertz, (0.25 * subSteps) / dt);
     ctx.contactSoftness.set(contactHertz, this.contactDampingRatio, ctx.h);
     ctx.staticSoftness.set(2 * contactHertz, this.contactDampingRatio, ctx.h);
     ctx.jointSoftness.set(2 * contactHertz, this.jointDampingRatio, ctx.h);
@@ -568,7 +569,18 @@ export class World {
         if (other.body === body || other.isSensor) return true;
         if (!ContactManager.shouldCollide(collider, other)) return true;
         if (other.body.isDynamic() && (!body.isBullet || other.body.isBullet)) return true;
-        if (shapeCast(collider.shape, castXf, dp, other.shape, other.worldTransform, minT, slop, castOut)) {
+        if (
+          shapeCast(
+            collider.shape,
+            castXf,
+            dp,
+            other.shape,
+            other.worldTransform,
+            minT,
+            slop,
+            castOut,
+          )
+        ) {
           // t = 0 表示起点已接触：交给推测接触处理，否则物体会被“钉”在起点（参考 Box2D v3）
           if (castOut.t > 0 && castOut.t < minT) minT = castOut.t;
         }

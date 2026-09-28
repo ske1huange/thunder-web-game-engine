@@ -5,7 +5,8 @@ import { addBox, addCapsule, addSphere, q, rng, v } from './helpers';
 export const raycast: Demo = {
   id: 'raycast',
   name: '射线与形状投射',
-  description: '中心的激光每帧发出 72 条射线（world.raycast），并用球形投射（world.castShape）探测下方地面。',
+  description:
+    '中心的激光每帧发出 72 条射线（world.raycast），并用球形投射（world.castShape）探测下方地面。',
   camera: { position: [0, 16, 14], target: [0, 0, 0] },
   setup({ world, overlay, setInfo }) {
     const rand = rng(3);
@@ -14,7 +15,10 @@ export const raycast: Demo = {
       const r = 4 + rand() * 4;
       const pos = v(Math.cos(a) * r, 1 + rand() * 2, Math.sin(a) * r);
       const kind = i % 3;
-      if (kind === 0) addBox(world, pos, v(0.4 + rand() * 0.4, 0.4 + rand() * 0.6, 0.4), { body: { rotation: q(0, rand() * 3, 0) } });
+      if (kind === 0)
+        addBox(world, pos, v(0.4 + rand() * 0.4, 0.4 + rand() * 0.6, 0.4), {
+          body: { rotation: q(0, rand() * 3, 0) },
+        });
       else if (kind === 1) addSphere(world, pos, 0.4 + rand() * 0.4);
       else addCapsule(world, pos, 0.3, 0.5, { body: { rotation: q(rand(), 0, rand()) } });
     }

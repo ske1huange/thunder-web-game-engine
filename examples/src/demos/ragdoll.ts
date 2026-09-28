@@ -1,4 +1,11 @@
-import { BallSocketJoint, HingeJoint, Quat, type RigidBody, Vec3, type World } from '@thunder/physics';
+import {
+  BallSocketJoint,
+  HingeJoint,
+  Quat,
+  type RigidBody,
+  Vec3,
+  type World,
+} from '@thunder/physics';
 import type { Demo } from './types';
 import { addBox, addCapsule, addSphere, v } from './helpers';
 
@@ -12,9 +19,15 @@ function createRagdoll(world: World, o: Vec3): RigidBody[] {
   world.addJoint(new BallSocketJoint({ bodyA: torso, bodyB: head, anchor: at(0, 0.33, 0) }));
   const parts = [torso, head];
   for (const side of [-1, 1]) {
-    const upperArm = addCapsule(world, at(side * 0.43, 0.22, 0), 0.06, 0.15, { body: { rotation: ARM } });
-    const lowerArm = addCapsule(world, at(side * 0.87, 0.22, 0), 0.055, 0.15, { body: { rotation: ARM } });
-    world.addJoint(new BallSocketJoint({ bodyA: torso, bodyB: upperArm, anchor: at(side * 0.21, 0.22, 0) }));
+    const upperArm = addCapsule(world, at(side * 0.43, 0.22, 0), 0.06, 0.15, {
+      body: { rotation: ARM },
+    });
+    const lowerArm = addCapsule(world, at(side * 0.87, 0.22, 0), 0.055, 0.15, {
+      body: { rotation: ARM },
+    });
+    world.addJoint(
+      new BallSocketJoint({ bodyA: torso, bodyB: upperArm, anchor: at(side * 0.21, 0.22, 0) }),
+    );
     world.addJoint(
       new HingeJoint({
         bodyA: upperArm,
@@ -28,7 +41,9 @@ function createRagdoll(world: World, o: Vec3): RigidBody[] {
     );
     const upperLeg = addCapsule(world, at(side * 0.1, -0.57, 0), 0.075, 0.18);
     const lowerLeg = addCapsule(world, at(side * 0.1, -1.09, 0), 0.065, 0.18);
-    world.addJoint(new BallSocketJoint({ bodyA: torso, bodyB: upperLeg, anchor: at(side * 0.1, -0.31, 0) }));
+    world.addJoint(
+      new BallSocketJoint({ bodyA: torso, bodyB: upperLeg, anchor: at(side * 0.1, -0.31, 0) }),
+    );
     world.addJoint(
       new HingeJoint({
         bodyA: upperLeg,

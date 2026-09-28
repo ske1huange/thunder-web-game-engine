@@ -14,7 +14,7 @@
     "dev": "pnpm --filter @thunder/examples dev",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest bench --run",
+    "bench": "pnpm build && node bench/stacking.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

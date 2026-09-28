@@ -2,12 +2,7 @@ import { Mat3 } from '../../math/Mat3';
 import { Vec3 } from '../../math/Vec3';
 import type { SolverContext } from '../solver/SolverContext';
 import { Joint, type JointOptions } from './Joint';
-import {
-  applyPointImpulse,
-  currentArm,
-  pointMassMatrix,
-  pointVelocity,
-} from './JointUtils';
+import { applyPointImpulse, currentArm, pointMassMatrix, pointVelocity } from './JointUtils';
 
 export interface BallSocketJointOptions extends JointOptions {
   /** 世界坐标锚点（与 localAnchorA/B 二选一） */
@@ -66,7 +61,11 @@ export class BallSocketJoint extends Joint {
 /** 由世界锚点或局部锚点初始化 */
 export function initAnchors(
   joint: Joint & { localAnchorA: Vec3; localAnchorB: Vec3 },
-  options: { anchor?: Readonly<Vec3>; localAnchorA?: Readonly<Vec3>; localAnchorB?: Readonly<Vec3> },
+  options: {
+    anchor?: Readonly<Vec3>;
+    localAnchorA?: Readonly<Vec3>;
+    localAnchorB?: Readonly<Vec3>;
+  },
 ): void {
   if (options.anchor) {
     joint.bodyA.getLocalPoint(options.anchor, joint.localAnchorA);

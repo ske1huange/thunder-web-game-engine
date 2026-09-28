@@ -55,8 +55,16 @@ export class AABB {
   }
 
   union(a: Readonly<AABB>, b: Readonly<AABB>): this {
-    this.min.set(Math.min(a.min.x, b.min.x), Math.min(a.min.y, b.min.y), Math.min(a.min.z, b.min.z));
-    this.max.set(Math.max(a.max.x, b.max.x), Math.max(a.max.y, b.max.y), Math.max(a.max.z, b.max.z));
+    this.min.set(
+      Math.min(a.min.x, b.min.x),
+      Math.min(a.min.y, b.min.y),
+      Math.min(a.min.z, b.min.z),
+    );
+    this.max.set(
+      Math.max(a.max.x, b.max.x),
+      Math.max(a.max.y, b.max.y),
+      Math.max(a.max.z, b.max.z),
+    );
     return this;
   }
 

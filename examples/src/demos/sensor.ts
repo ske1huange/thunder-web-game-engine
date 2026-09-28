@@ -19,12 +19,12 @@ export const sensor: Demo = {
     world.on('sensorEnter', (e) => {
       if (e.sensor !== zone) return;
       inside.add(e.visitor.body);
-      view.colorOverride.set(e.visitor.body, 0x22c55e);
+      view.setAppearance(e.visitor.body, { color: 0x22c55e });
     });
     world.on('sensorExit', (e) => {
       if (e.sensor !== zone) return;
       inside.delete(e.visitor.body);
-      view.colorOverride.delete(e.visitor.body);
+      view.clearAppearance(e.visitor.body);
     });
     const rand = rng(11);
     let timer = 0;
@@ -43,7 +43,7 @@ export const sensor: Demo = {
         const b = balls[i]!;
         if (b.position.x > 14 || b.position.y < -5) {
           inside.delete(b);
-          view.colorOverride.delete(b);
+          view.clearAppearance(b);
           world.destroyBody(b);
           balls.splice(i, 1);
         }

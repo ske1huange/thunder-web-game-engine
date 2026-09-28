@@ -5,7 +5,8 @@
     "types": ["vite/client"],
     "noEmit": true,
     "paths": {
-      "@thunder/physics": ["../packages/physics/src/index.ts"]
+      "@thunder/physics": ["../packages/physics/src/index.ts"],
+      "@thunder/render": ["../packages/render/src/index.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

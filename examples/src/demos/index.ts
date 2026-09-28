@@ -1,5 +1,6 @@
 import { chain } from './chain';
 import { dominoes } from './dominoes';
+import { lights } from './lights';
 import { machines } from './machines';
 import { pyramid } from './pyramid';
 import { ragdoll } from './ragdoll';
@@ -19,5 +20,6 @@ export const demos: Demo[] = [
   sensor,
   shapes,
   wall,
+  lights,
 ];
 export type { Demo } from './types';

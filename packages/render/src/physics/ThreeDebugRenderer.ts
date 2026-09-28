@@ -18,12 +18,20 @@ export class ThreeDebugRenderer implements DebugDrawer {
       depthTest: false,
       transparent: true,
       opacity: 0.9,
+      // 调试线保持原色，不参与色调映射
+      toneMapped: false,
     });
     this.object = new THREE.LineSegments(this.geometry, material);
     this.object.renderOrder = 999;
     this.object.frustumCulled = false;
   }
 
+  /** 当前收集到的线段数量 */
+  get lineCount(): number {
+    return this.count / 2;
+  }
+
+  /** 每帧绘制前调用，清空上一帧的线段 */
   begin(): void {
     this.count = 0;
   }
@@ -79,11 +87,17 @@ export class ThreeDebugRenderer implements DebugDrawer {
     this.drawLine(a, b, color);
   }
 
+  /** 每帧绘制后调用，提交到 GPU */
   end(): void {
     const pos = this.geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
     const col = this.geometry.getAttribute('color') as THREE.BufferAttribute | undefined;
     if (pos) pos.needsUpdate = true;
     if (col) col.needsUpdate = true;
     this.geometry.setDrawRange(0, this.count);
+  }
+
+  dispose(): void {
+    this.geometry.dispose();
+    (this.object.material as THREE.Material).dispose();
   }
 }

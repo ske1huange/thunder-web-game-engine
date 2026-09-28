@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@thunder/physics": "workspace:*",
+    "@thunder/render": "workspace:*",
     "three": "^0.186.1"
   },
   "devDependencies": {

@@ -163,7 +163,9 @@ kbd {
   position: absolute;
   top: 12px;
   left: 12px;
+  right: 320px;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -175,6 +177,30 @@ kbd {
   padding: 6px 12px;
   cursor: pointer;
   font: inherit;
+}
+
+#toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(22, 26, 34, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 4px 0 10px;
+  color: var(--muted);
+}
+
+#toolbar select {
+  background: transparent;
+  color: var(--text);
+  border: none;
+  font: inherit;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+
+#toolbar select option {
+  background: var(--panel);
 }
 
 #toolbar button:hover,

@@ -7,6 +7,8 @@ export const dominoes: Demo = {
   name: '多米诺骨牌',
   description: '沿螺线排列的 120 块骨牌，推倒第一块后依次倒下。',
   camera: { position: [0, 14, 18], target: [0, 0, 0] },
+  lighting: 'sunset',
+  grading: 'warm',
   setup({ world, setInfo }) {
     const count = 120;
     let angle = 0;

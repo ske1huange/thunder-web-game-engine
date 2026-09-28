@@ -9,7 +9,10 @@ export default defineConfig({
       '@thunder/physics': fileURLToPath(
         new URL('../packages/physics/src/index.ts', import.meta.url),
       ),
+      '@thunder/render': fileURLToPath(new URL('../packages/render/src/index.ts', import.meta.url)),
     },
+    // 引擎包与演示站共用同一份 three.js
+    dedupe: ['three'],
   },
   build: {
     target: 'es2022',

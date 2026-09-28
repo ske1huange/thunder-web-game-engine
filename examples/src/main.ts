@@ -1,47 +1,38 @@
 import { MouseJoint, PlaneShape, type RigidBody, SphereShape, Vec3, World } from '@thunder/physics';
+import {
+  type GradingPresetName,
+  type LightingPresetName,
+  PhysicsView,
+  RenderPipeline,
+  ThreeDebugRenderer,
+  gradingPresetNames,
+  gradingPresets,
+  lightingPresetNames,
+  lightingPresets,
+} from '@thunder/render';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { type Demo, demos } from './demos';
 import type { DemoHooks } from './demos/types';
-import { PhysicsView } from './PhysicsView';
-import { ThreeDebugRenderer } from './ThreeDebugRenderer';
 
 const FIXED_DT = 1 / 60;
 
 // ---------------------------------------------------------------------------
-// three.js 场景
+// 渲染：@thunder/render 的渲染管线（光源系统 + 后期调色）
 // ---------------------------------------------------------------------------
 const stage = document.getElementById('stage')!;
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-stage.prepend(renderer.domElement);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0f1115);
-scene.fog = new THREE.Fog(0x0f1115, 40, 120);
-
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+const pipeline = new RenderPipeline(camera, { container: stage, shadowQuality: 'medium' });
+const { scene, renderer } = pipeline;
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 
-scene.add(new THREE.HemisphereLight(0xdde6ff, 0x30303a, 0.9));
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-sun.position.set(12, 24, 10);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -25;
-sun.shadow.camera.right = 25;
-sun.shadow.camera.top = 25;
-sun.shadow.camera.bottom = -25;
-sun.shadow.camera.far = 80;
-sun.shadow.bias = -0.0005;
-scene.add(sun);
-
 const grid = new THREE.GridHelper(100, 100, 0x3a4154, 0x262c3a);
 grid.position.y = 0.001;
+(grid.material as THREE.Material).transparent = true;
+(grid.material as THREE.Material).opacity = 0.6;
 scene.add(grid);
 
 const debugRenderer = new ThreeDebugRenderer();
@@ -49,11 +40,7 @@ const overlayRenderer = new ThreeDebugRenderer();
 scene.add(debugRenderer.object, overlayRenderer.object);
 
 function resize(): void {
-  const w = stage.clientWidth;
-  const h = stage.clientHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+  pipeline.setSize(stage.clientWidth, stage.clientHeight);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -84,6 +71,9 @@ function loadDemo(demo: Demo): void {
   world = new World();
   view = new PhysicsView(world);
   scene.add(view.root);
+  pipeline.lights.clearLights();
+  setLighting(demo.lighting ?? 'studio');
+  setGrading(demo.grading ?? 'neutral');
   ground = world.createBody({ type: 'static' });
   if (demo.ground !== false) ground.addCollider({ shape: new PlaneShape(), friction: 0.6 });
   infoEl.textContent = '';
@@ -94,6 +84,7 @@ function loadDemo(demo: Demo): void {
     world,
     ground,
     view,
+    lights: pipeline.lights,
     overlay: overlayRenderer,
     setInfo: (text) => {
       infoEl.textContent = text;
@@ -246,6 +237,26 @@ document.getElementById('btn-step')!.addEventListener('click', () => {
 });
 document.getElementById('btn-reset')!.addEventListener('click', () => loadDemo(current));
 
+// 光照与调色预设
+const selLighting = document.getElementById('sel-lighting') as HTMLSelectElement;
+const selGrading = document.getElementById('sel-grading') as HTMLSelectElement;
+for (const name of lightingPresetNames) {
+  selLighting.add(new Option(lightingPresets[name].label, name));
+}
+for (const name of gradingPresetNames) {
+  selGrading.add(new Option(gradingPresets[name].label, name));
+}
+function setLighting(name: LightingPresetName): void {
+  pipeline.setLighting(name);
+  selLighting.value = name;
+}
+function setGrading(name: GradingPresetName): void {
+  pipeline.setGrading(name);
+  selGrading.value = name;
+}
+selLighting.addEventListener('change', () => setLighting(selLighting.value as LightingPresetName));
+selGrading.addEventListener('change', () => setGrading(selGrading.value as GradingPresetName));
+
 const statsEl = document.getElementById('stats')!;
 let fps = 60;
 function updateStats(): void {
@@ -263,12 +274,13 @@ function updateStats(): void {
 // ---------------------------------------------------------------------------
 // 主循环
 // ---------------------------------------------------------------------------
-const clock = new THREE.Clock();
+const timer = new THREE.Timer();
 let statsTimer = 0;
 
 function frame(): void {
   requestAnimationFrame(frame);
-  const dt = Math.min(clock.getDelta(), 0.1);
+  timer.update();
+  const dt = Math.min(timer.getDelta(), 0.1);
   fps = fps * 0.95 + (dt > 0 ? 1 / dt : 60) * 0.05;
 
   if (!paused) {
@@ -296,7 +308,7 @@ function frame(): void {
   debugRenderer.end();
 
   controls.update();
-  renderer.render(scene, camera);
+  pipeline.render(controls.target, alpha);
 
   statsTimer += dt;
   if (statsTimer > 0.25) {
@@ -315,6 +327,9 @@ function exposeForTests(): void {
     get simTime() {
       return simTime;
     },
+    pipeline,
+    setLighting,
+    setGrading,
   };
 }
 

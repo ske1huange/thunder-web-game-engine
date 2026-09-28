@@ -38,6 +38,9 @@ importers:
       '@thunder/physics':
         specifier: workspace:*
         version: link:../packages/physics
+      '@thunder/render':
+        specifier: workspace:*
+        version: link:../packages/render
       three:
         specifier: ^0.186.1
         version: 0.186.1
@@ -54,6 +57,24 @@ importers:
 
   packages/physics:
     devDependencies:
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.28)(typescript@6.0.3)
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  packages/render:
+    devDependencies:
+      '@thunder/physics':
+        specifier: workspace:*
+        version: link:../physics
+      '@types/three':
+        specifier: ^0.186.0
+        version: 0.186.0
+      three:
+        specifier: ^0.186.1
+        version: 0.186.1
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.28)(typescript@6.0.3)

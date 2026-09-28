@@ -6,6 +6,7 @@ export const pyramid: Demo = {
   name: '箱子金字塔',
   description: '12 层共 78 个箱子的金字塔，检验堆叠稳定性与休眠。按空格发射小球击倒它。',
   camera: { position: [14, 8, 16], target: [0, 4, 0] },
+  lighting: 'day',
   setup({ world, setInfo }) {
     const rows = 12;
     const half = 0.5;

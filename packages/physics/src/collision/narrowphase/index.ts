@@ -8,3 +8,4 @@ export {
   testOverlap,
   type CollideConfig,
 } from './Collide';
+export { ShapeCastOutput, shapeCast, shapeCastProxies } from './ShapeCast';

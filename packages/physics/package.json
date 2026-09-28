@@ -1,0 +1,41 @@
+{
+  "name": "@thunder/physics",
+  "version": "0.1.0",
+  "description": "Thunder Physics —— 面向 HTML5 游戏的纯 TypeScript 3D 刚体物理引擎",
+  "keywords": [
+    "physics",
+    "physics-engine",
+    "3d",
+    "rigid-body",
+    "collision-detection",
+    "html5",
+    "game",
+    "typescript"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "unpkg": "./dist/thunder-physics.global.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "~6.0.3"
+  }
+}

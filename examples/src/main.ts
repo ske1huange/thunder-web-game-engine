@@ -76,6 +76,7 @@ function loadDemo(demo: Demo): void {
   setGrading(demo.grading ?? 'neutral');
   ground = world.createBody({ type: 'static' });
   if (demo.ground !== false) ground.addCollider({ shape: new PlaneShape(), friction: 0.6 });
+  grid.visible = demo.ground !== false;
   infoEl.textContent = '';
   simTime = 0;
   accumulator = 0;

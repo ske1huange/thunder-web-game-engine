@@ -7,6 +7,7 @@ import { ragdoll } from './ragdoll';
 import { raycast } from './raycast';
 import { sensor } from './sensor';
 import { shapes } from './shapes';
+import { terrain } from './terrain';
 import type { Demo } from './types';
 import { wall } from './wall';
 
@@ -21,5 +22,6 @@ export const demos: Demo[] = [
   shapes,
   wall,
   lights,
+  terrain,
 ];
 export type { Demo } from './types';

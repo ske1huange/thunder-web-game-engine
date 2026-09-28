@@ -3,10 +3,12 @@ import {
   type CapsuleShape,
   type Collider,
   type CylinderShape,
+  type HeightfieldShape,
   type RigidBody,
   Quat,
   ShapeType,
   type SphereShape,
+  type TriMeshShape,
   Vec3,
   type World,
 } from '@thunder/physics';
@@ -28,6 +30,10 @@ export interface BodyAppearance {
    * 否则光源位于网格内部，会被自身完全遮挡。
    */
   castShadow: boolean;
+  /**
+   * 是否显示（默认 true）。关卡模型由游戏自己渲染、只用来生成碰撞体时设为 false，避免画两遍。
+   */
+  visible: boolean;
 }
 
 export interface PhysicsViewOptions {
@@ -114,11 +120,14 @@ export class PhysicsView {
         this.objects.set(body, obj);
         this.root.add(obj);
       }
+      const appearance = this.appearances.get(body);
+      obj.visible = appearance?.visible ?? true;
+      if (!obj.visible) continue;
       body.interpolate(alpha, this.tmpP, this.tmpQ);
       obj.position.set(this.tmpP.x, this.tmpP.y, this.tmpP.z);
       obj.quaternion.set(this.tmpQ.x, this.tmpQ.y, this.tmpQ.z, this.tmpQ.w);
       const sleeping = body.isDynamic() && !body.isAwake;
-      const castShadow = this.appearances.get(body)?.castShadow ?? true;
+      const castShadow = appearance?.castShadow ?? true;
       for (const child of obj.children) {
         const mesh = child as THREE.Mesh;
         const collider = mesh.userData.collider as Collider;
@@ -164,7 +173,10 @@ export class PhysicsView {
     const emissiveIntensity = a?.emissiveIntensity ?? 1;
     const roughness = a?.roughness ?? 0.65;
     const metalness = a?.metalness ?? 0.05;
-    const key = `${color.getHexString()}|${String(emissive)}|${emissiveIntensity}|${roughness}|${metalness}|${opacity}`;
+    // 双面三角网格两面都要可见
+    const shape = collider.shape;
+    const doubleSided = shape.type === ShapeType.TriMesh && (shape as TriMeshShape).doubleSided;
+    const key = `${color.getHexString()}|${String(emissive)}|${emissiveIntensity}|${roughness}|${metalness}|${opacity}|${doubleSided}`;
     let m = this.materials.get(key);
     if (!m) {
       const transparent = opacity < 1;
@@ -177,6 +189,7 @@ export class PhysicsView {
         transparent,
         opacity,
         depthWrite: !transparent,
+        side: doubleSided ? THREE.DoubleSide : THREE.FrontSide,
       });
       this.materials.set(key, m);
     }
@@ -227,6 +240,19 @@ export class PhysicsView {
         g.rotateX(-Math.PI / 2);
         return g;
       }
+      case ShapeType.TriMesh: {
+        // 关卡网格一般有硬边：展开为非索引几何体得到平直着色
+        const mesh = shape as TriMeshShape;
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(mesh.positions), 3));
+        g.setIndex(new THREE.BufferAttribute(Uint32Array.from(mesh.indices), 1));
+        const flat = g.toNonIndexed();
+        g.dispose();
+        flat.computeVertexNormals();
+        return flat;
+      }
+      case ShapeType.Heightfield:
+        return heightfieldGeometry(shape as HeightfieldShape);
       default:
         return null;
     }
@@ -260,4 +286,32 @@ export class PhysicsView {
       if (mesh.geometry) mesh.geometry.dispose();
     });
   }
+}
+
+/** 高度场网格：与碰撞三角形相同的对角线划分，平滑法线 */
+function heightfieldGeometry(field: HeightfieldShape): THREE.BufferGeometry {
+  const { rows, cols } = field;
+  const positions = new Float32Array(rows * cols * 3);
+  const p = new Vec3();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      field.getVertex(r, c, p);
+      positions.set([p.x, p.y, p.z], (r * cols + c) * 3);
+    }
+  }
+  const indices = new Uint32Array((rows - 1) * (cols - 1) * 6);
+  let k = 0;
+  for (let r = 0; r < rows - 1; r++) {
+    for (let c = 0; c < cols - 1; c++) {
+      const i = r * cols + c;
+      // 与 HeightfieldShape.getTriangle 一致：(c,r)(c,r+1)(c+1,r+1) 与 (c,r)(c+1,r+1)(c+1,r)
+      indices.set([i, i + cols, i + cols + 1, i, i + cols + 1, i + 1], k);
+      k += 6;
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  g.setIndex(new THREE.BufferAttribute(indices, 1));
+  g.computeVertexNormals();
+  return g;
 }

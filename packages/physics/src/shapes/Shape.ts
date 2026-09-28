@@ -11,6 +11,8 @@ export const ShapeType = {
   Cylinder: 3,
   ConvexHull: 4,
   Plane: 5,
+  TriMesh: 6,
+  Heightfield: 7,
 } as const;
 export type ShapeType = (typeof ShapeType)[keyof typeof ShapeType];
 

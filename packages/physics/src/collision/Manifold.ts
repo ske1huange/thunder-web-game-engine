@@ -20,6 +20,8 @@ export class ManifoldPoint {
   maxNormalImpulse = 0;
   /** 本帧是否继承了上一帧的冲量 */
   persisted = false;
+  /** 上一次完整窄相时的分离距离（接触缓存用） */
+  cachedSeparation = 0;
 
   // ---- 求解器临时量（每步重算） ----
   readonly anchorA = new Vec3();
@@ -51,6 +53,8 @@ export class Manifold {
   readonly normal = new Vec3();
   readonly points: ManifoldPoint[] = [];
   pointCount = 0;
+  /** 法线在刚体 A 局部坐标系中的方向（接触缓存用） */
+  readonly localNormal = new Vec3();
   /** 摩擦方向（求解器使用） */
   readonly tangent1 = new Vec3();
   readonly tangent2 = new Vec3();

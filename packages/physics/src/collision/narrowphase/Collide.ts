@@ -1,6 +1,8 @@
+import { AABB } from '../../math/AABB';
 import { Transform } from '../../math/Transform';
 import { Vec3 } from '../../math/Vec3';
 import type { ConvexPolyhedron } from '../../shapes/ConvexPolyhedron';
+import type { MeshShape } from '../../shapes/MeshShape';
 import { type Shape, ShapeType } from '../../shapes/Shape';
 import { ContactBuffer, type Manifold } from '../Manifold';
 import { DistanceOutput, DistanceProxy, gjkDistance } from './GJK';
@@ -24,6 +26,8 @@ const enum Kind {
   Plane = 0,
   Segment = 1,
   Hull = 2,
+  /** 三角网格 / 高度场（由 collideMesh 处理） */
+  Mesh = 3,
 }
 
 function kindOf(shape: Shape): Kind {
@@ -33,6 +37,9 @@ function kindOf(shape: Shape): Kind {
     case ShapeType.Sphere:
     case ShapeType.Capsule:
       return Kind.Segment;
+    case ShapeType.TriMesh:
+    case ShapeType.Heightfield:
+      return Kind.Mesh;
     default:
       return Kind.Hull;
   }
@@ -57,7 +64,8 @@ const t4 = new Vec3();
 const UP = new Vec3(0, 1, 0);
 
 /**
- * 两形状碰撞，结果写入 manifold（会先清空）。
+ * 两个凸形状（含平面）碰撞，结果写入 manifold（会先清空）。
+ * 三角网格 / 高度场会产生多个流形，请使用 collideMesh。
  */
 export function collideShapes(
   shapeA: Shape,
@@ -70,6 +78,7 @@ export function collideShapes(
   manifold.clear();
   const kA = kindOf(shapeA);
   const kB = kindOf(shapeB);
+  if (kA === Kind.Mesh || kB === Kind.Mesh) return;
   if (kA > kB) {
     collideOrdered(shapeB, xfB, kB, shapeA, xfA, kA, manifold, config);
     manifold.normal.negate();
@@ -528,20 +537,15 @@ function ensureB(n: number, arr: Vec3[]): void {
 
 const edgeDirsB: Vec3[] = [];
 const arcNormalsB: Vec3[] = [];
+/** 棱方向与高斯弧法线在第一次需要时才变换（多数配对在面测试就提前结束） */
+let edgesBPrepared = false;
 
-export function collideHulls(
-  hullA: ConvexPolyhedron,
-  xfA: Readonly<Transform>,
-  hullB: ConvexPolyhedron,
-  xfB: Readonly<Transform>,
-  manifold: Manifold,
-  config: CollideConfig,
-): void {
-  const spec = config.speculativeDistance;
-  const slop = config.linearSlop;
-
-  // 在 A 的局部坐标系中计算
-  relXf.multiplyInverseA(xfA, xfB);
+/**
+ * 把多面体 B 变换到 A 的局部坐标系（rel = A⁻¹·B），结果缓存在模块内，
+ * 供随后的 collideHullsPrepared 使用。与网格碰撞时 B 对所有三角形只需变换一次。
+ */
+export function prepareHullB(hullB: ConvexPolyhedron, rel: Readonly<Transform>): void {
+  relXf.copy(rel);
   const nvB = hullB.vertices.length;
   const nfB = hullB.faces.length;
   ensureB(nvB, vertsB);
@@ -553,6 +557,39 @@ export function collideHulls(
     offsetsB[i] = f.d + normalsB[i]!.dot(relXf.position);
   }
   relXf.transformPoint(hullB.centroid, centroidB);
+  edgesBPrepared = false;
+}
+
+export function collideHulls(
+  hullA: ConvexPolyhedron,
+  xfA: Readonly<Transform>,
+  hullB: ConvexPolyhedron,
+  xfB: Readonly<Transform>,
+  manifold: Manifold,
+  config: CollideConfig,
+): void {
+  // 在 A 的局部坐标系中计算
+  prepareHullB(hullB, tmpRel.multiplyInverseA(xfA, xfB));
+  collideHullsPrepared(hullA, xfA, hullB, manifold, config);
+}
+
+const tmpRel = new Transform();
+
+/**
+ * 多面体 A 与（已由 prepareHullB 变换到 A 局部坐标系的）多面体 B 碰撞。
+ * 结果追加到 manifold（调用前应清空），法线由 A 指向 B。
+ */
+export function collideHullsPrepared(
+  hullA: ConvexPolyhedron,
+  xfA: Readonly<Transform>,
+  hullB: ConvexPolyhedron,
+  manifold: Manifold,
+  config: CollideConfig,
+): void {
+  const spec = config.speculativeDistance;
+  const slop = config.linearSlop;
+  const nvB = hullB.vertices.length;
+  const nfB = hullB.faces.length;
 
   // ---- 面 A ----
   let sepA = -Infinity;
@@ -597,22 +634,29 @@ export function collideHulls(
   const edgesA = hullA.edges;
   const edgesB = hullB.edges;
   const neB = edgesB.length;
-  ensureB(neB, edgeDirsB);
-  ensureB(neB, arcNormalsB);
-  for (let j = 0; j < neB; j++) {
-    relXf.transformVector(hullB.edgeDirs[j]!, edgeDirsB[j]!);
-    relXf.transformVector(hullB.edgeArcNormals[j]!, arcNormalsB[j]!);
+  hullA.ensureEdgeData();
+  if (!edgesBPrepared) {
+    ensureB(neB, edgeDirsB);
+    ensureB(neB, arcNormalsB);
+    for (let j = 0; j < neB; j++) {
+      relXf.transformVector(hullB.edgeDirs[j]!, edgeDirsB[j]!);
+      relXf.transformVector(hullB.edgeArcNormals[j]!, arcNormalsB[j]!);
+    }
+    edgesBPrepared = true;
   }
   const dirsA = hullA.edgeDirs;
   const arcsA = hullA.edgeArcNormals;
   const cA = hullA.centroid;
+  // 平面多边形（网格三角形）：棱的高斯弧是 n → m → -n 的半圆，拆成两段四分之一圆弧测试
+  const flatA = hullA.isFlat;
+  const flatN = facesA[0]!.normal;
   let sepE = -Infinity;
   let edgeA = -1;
   let edgeB = -1;
   for (let i = 0; i < edgesA.length; i++) {
     const ea = edgesA[i]!;
-    const nA1 = facesA[ea.faceA]!.normal;
-    const nA2 = facesA[ea.faceB]!.normal;
+    const nA1 = flatA ? flatN : facesA[ea.faceA]!.normal;
+    const nA2 = flatA ? hullA.edgeOutward[i]! : facesA[ea.faceB]!.normal;
     const bxa = arcsA[i]!;
     const eA = dirsA[i]!;
     const pa = vertsA[ea.a]!;
@@ -627,7 +671,12 @@ export function collideHulls(
       const dxc = arcNormalsB[j]!;
       const adc = nA1.x * dxc.x + nA1.y * dxc.y + nA1.z * dxc.z;
       const bdc = nA2.x * dxc.x + nA2.y * dxc.y + nA2.z * dxc.z;
-      if (adc * bdc >= 0 || cba * bdc <= 0) continue;
+      if (adc * bdc >= 0 || cba * bdc <= 0) {
+        // 平面多边形的第二段弧：m → -n
+        if (!flatA) continue;
+        const bdc2 = -adc;
+        if (bdc * bdc2 >= 0 || cba * bdc2 <= 0) continue;
+      }
       const eB = edgeDirsB[j]!;
       let ax = eA.y * eB.z - eA.z * eB.y;
       let ay = eA.z * eB.x - eA.x * eB.z;
@@ -785,13 +834,20 @@ const ovA = new DistanceProxy();
 const ovB = new DistanceProxy();
 const ovOut = new DistanceOutput();
 
-/** 两形状是否相交（接触也算） */
+/** 两形状是否相交（接触也算）。网格只检测表面，完全位于封闭网格内部的形状不算重叠 */
 export function testOverlap(
   shapeA: Shape,
   xfA: Readonly<Transform>,
   shapeB: Shape,
   xfB: Readonly<Transform>,
 ): boolean {
+  const kA = kindOf(shapeA);
+  const kB = kindOf(shapeB);
+  if (kA === Kind.Mesh || kB === Kind.Mesh) {
+    if (kA === Kind.Mesh && kB === Kind.Mesh) return false;
+    if (kA === Kind.Mesh) return overlapMesh(shapeA as MeshShape, xfA, shapeB, xfB);
+    return overlapMesh(shapeB as MeshShape, xfB, shapeA, xfA);
+  }
   const aPlane = shapeA.type === ShapeType.Plane;
   const bPlane = shapeB.type === ShapeType.Plane;
   if (aPlane && bPlane) return false;
@@ -810,4 +866,32 @@ export function testOverlap(
   ovA.setShape(shapeA, xfA);
   ovB.setShape(shapeB, xfB);
   return gjkDistance(ovA, ovB, true, ovOut).distance <= 1e-9;
+}
+
+const ovRel = new Transform();
+const ovAabb = new AABB();
+const ovTri = [new Vec3(), new Vec3(), new Vec3()];
+
+function overlapMesh(
+  mesh: MeshShape,
+  xfMesh: Readonly<Transform>,
+  other: Shape,
+  xfOther: Readonly<Transform>,
+): boolean {
+  if (other.type === ShapeType.Plane) return false;
+  // 在网格局部坐标系中逐三角形做 GJK
+  ovRel.multiplyInverseA(xfMesh, xfOther);
+  other.computeAABB(ovRel, ovAabb);
+  ovB.setShape(other, ovRel);
+  let hit = false;
+  mesh.queryTriangles(ovAabb, (tri) => {
+    mesh.getTriangle(tri, ovTri[0]!, ovTri[1]!, ovTri[2]!);
+    ovA.setPointsRef(ovTri, 0, 3);
+    if (gjkDistance(ovA, ovB, true, ovOut).distance <= 1e-9) {
+      hit = true;
+      return false;
+    }
+    return true;
+  });
+  return hit;
 }

@@ -4,8 +4,11 @@ export {
   collideSegments,
   collideHullSegment,
   collideHulls,
+  collideHullsPrepared,
+  prepareHullB,
   closestPointsSegments,
   testOverlap,
   type CollideConfig,
 } from './Collide';
-export { ShapeCastOutput, shapeCast, shapeCastProxies } from './ShapeCast';
+export { collideMesh, MAX_MESH_MANIFOLDS, type ManifoldList } from './CollideMesh';
+export { ShapeCastOutput, shapeCast, shapeCastProxies, type ContinuousCastInfo } from './ShapeCast';

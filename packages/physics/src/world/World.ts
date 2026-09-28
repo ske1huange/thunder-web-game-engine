@@ -1,6 +1,10 @@
 import { BroadPhase, ProxyType } from '../collision/broadphase/BroadPhase';
 import type { CollideConfig } from '../collision/narrowphase/Collide';
-import { ShapeCastOutput, shapeCast } from '../collision/narrowphase/ShapeCast';
+import {
+  type ContinuousCastInfo,
+  ShapeCastOutput,
+  shapeCast,
+} from '../collision/narrowphase/ShapeCast';
 import type { Collider } from '../dynamics/Collider';
 import type { Contact } from '../dynamics/Contact';
 import { ContactManager } from '../dynamics/ContactManager';
@@ -119,6 +123,8 @@ const tmpAabb = new AABB();
 const tmpAabb2 = new AABB();
 const castXf = new Transform();
 const castOut = new ShapeCastOutput();
+const ccdCentroid = new Vec3();
+const continuousInfo: ContinuousCastInfo = { centroid: ccdCentroid, minExtent: 0 };
 
 /**
  * 物理世界：管理刚体、碰撞体、关节与接触，并推进模拟。
@@ -286,12 +292,19 @@ export class World {
 
   /** @internal */
   registerCollider(collider: Collider): void {
-    if (collider.shape.type === ShapeType.Plane && !collider.body.isStatic()) {
+    const type = collider.shape.type;
+    if (type === ShapeType.Plane && !collider.body.isStatic()) {
       throw new Error('PlaneShape 只能用于静态刚体');
     }
+    if (
+      (type === ShapeType.TriMesh || type === ShapeType.Heightfield) &&
+      collider.body.isDynamic()
+    ) {
+      throw new Error('TriMeshShape / HeightfieldShape 只能用于静态或运动学刚体');
+    }
     collider.updateWorldTransform();
-    const type = collider.body.isStatic() ? ProxyType.Static : ProxyType.Dynamic;
-    collider.proxy = this.broadPhase.createProxy(collider.aabb, type, collider);
+    const proxyType = collider.body.isStatic() ? ProxyType.Static : ProxyType.Dynamic;
+    collider.proxy = this.broadPhase.createProxy(collider.aabb, proxyType, collider);
   }
 
   /** @internal */
@@ -557,6 +570,9 @@ export class World {
 
     let minT = 1;
     const slop = this.linearSlop;
+    // 起点处的质心（网格只对质心即将穿过的三角形投射，见 ContinuousCastInfo）
+    continuousInfo.centroid = ccdCentroid.subVectors(body.center, dp);
+    continuousInfo.minExtent = body.minExtent;
     for (const collider of body.colliders) {
       if (collider.isSensor) continue;
       // 终点位姿下的碰撞体，平移回起点后沿 dp 投射
@@ -579,6 +595,7 @@ export class World {
             minT,
             slop,
             castOut,
+            continuousInfo,
           )
         ) {
           // t = 0 表示起点已接触：交给推测接触处理，否则物体会被“钉”在起点（参考 Box2D v3）

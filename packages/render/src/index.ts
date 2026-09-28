@@ -42,3 +42,11 @@ export {
 } from './postprocessing/lut';
 export { PhysicsView, type BodyAppearance, type PhysicsViewOptions } from './physics/PhysicsView';
 export { ThreeDebugRenderer } from './physics/ThreeDebugRenderer';
+export {
+  collectTriangles,
+  createTriMeshFromObject,
+  createTriMeshFromGeometry,
+  createConvexHullFromObject,
+  type CollectOptions,
+  type CollectedTriangles,
+} from './physics/colliders';

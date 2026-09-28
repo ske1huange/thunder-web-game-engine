@@ -5,7 +5,8 @@ import { Vec3 } from '../math/Vec3';
 export interface PolyFace {
   readonly indices: readonly number[];
   readonly normal: Vec3;
-  readonly d: number;
+  /** 平面常数（三角形“多面体”会原地更新） */
+  d: number;
 }
 
 /** 凸多面体的一条棱：端点与两侧的面（faceA 中方向为 a→b，faceB 中为 b→a） */
@@ -30,10 +31,21 @@ export class ConvexPolyhedron {
   readonly centroid: Vec3;
   /** 每条棱的方向 b - a（与 edges 一一对应） */
   readonly edgeDirs: readonly Vec3[];
-  /** 每条棱在高斯图上的弧平面法线 cross(n_faceB, n_faceA)，用于 SAT 剪枝 */
+  /**
+   * 每条棱在高斯图上的弧平面法线 cross(n_faceB, n_faceA)，用于 SAT 剪枝。
+   * 平面多边形的两个面法线反向，弧为经过棱外法线的半圆，弧平面法线取 cross(m, n)（m 见 edgeOutward）。
+   */
   readonly edgeArcNormals: readonly Vec3[];
+  /**
+   * 是否为平面多边形（正反两个面，例如网格中的单个三角形）。
+   * 此时每条棱的高斯弧是从 n 经过棱外法线 m 到 -n 的半圆，SAT 剪枝按两段四分之一圆弧测试。
+   */
+  readonly isFlat: boolean;
+  /** 平面多边形每条棱在平面内的单位外法线（非平面多面体为零向量） */
+  readonly edgeOutward: readonly Vec3[];
 
-  constructor(vertices: Vec3[], faceLoops: number[][]) {
+  constructor(vertices: Vec3[], faceLoops: number[][], isFlat = false) {
+    this.isFlat = isFlat;
     this.vertices = vertices;
     const faces: PolyFace[] = [];
     for (const loop of faceLoops) {
@@ -49,6 +61,37 @@ export class ConvexPolyhedron {
     this.edgeArcNormals = this.edges.map((e) =>
       new Vec3().crossVectors(faces[e.faceB]!.normal, faces[e.faceA]!.normal),
     );
+    this.edgeOutward = this.edges.map(() => new Vec3());
+    if (isFlat) this.updateFlatEdges();
+  }
+
+  /** setTriangle 之后棱方向等数据尚未更新（只有 SAT 的棱-棱测试需要，按需计算） */
+  private edgeDataDirty = false;
+
+  /** 确保棱方向、棱外法线与高斯弧法线是最新的（setTriangle 之后按需调用） */
+  ensureEdgeData(): void {
+    if (!this.edgeDataDirty) return;
+    this.edgeDataDirty = false;
+    const v = this.vertices;
+    const edges = this.edges;
+    for (let i = 0; i < edges.length; i++) {
+      const e = edges[i]!;
+      this.edgeDirs[i]!.subVectors(v[e.b]!, v[e.a]!);
+    }
+    this.updateFlatEdges();
+  }
+
+  /** 平面多边形：计算棱的平面内外法线与高斯弧平面法线 */
+  private updateFlatEdges(): void {
+    const n = this.faces[0]!.normal;
+    const edges = this.edges;
+    for (let i = 0; i < edges.length; i++) {
+      const m = this.edgeOutward[i]!;
+      m.crossVectors(this.edgeDirs[i]!, n);
+      m.normalize();
+      if (m.dot(tmpTri.subVectors(this.vertices[edges[i]!.a]!, this.centroid)) < 0) m.negate();
+      this.edgeArcNormals[i]!.crossVectors(m, n);
+    }
   }
 
   /** 长方体（半边长 hx, hy, hz） */
@@ -72,6 +115,45 @@ export class ConvexPolyhedron {
       [0, 3, 2, 1], // -Z
     ];
     return new ConvexPolyhedron(v, faces);
+  }
+
+  /** 可原地更新的三角形（正反两个面），用于三角网格 / 高度场的逐三角形碰撞 */
+  static createTriangle(): ConvexPolyhedron {
+    const v = [new Vec3(0, 0, 0), new Vec3(1, 0, 0), new Vec3(0, 0, 1)];
+    return new ConvexPolyhedron(
+      v,
+      [
+        [0, 1, 2],
+        [2, 1, 0],
+      ],
+      true,
+    );
+  }
+
+  /**
+   * 更新三角形顶点（仅用于 createTriangle 创建的对象）。
+   * 棱方向等 SAT 数据延迟到 ensureEdgeData 时才计算。
+   * @returns 三角形退化（面积过小）时返回 false
+   */
+  setTriangle(a: Readonly<Vec3>, b: Readonly<Vec3>, c: Readonly<Vec3>): boolean {
+    const v = this.vertices;
+    v[0]!.copy(a);
+    v[1]!.copy(b);
+    v[2]!.copy(c);
+    const n = this.faces[0]!.normal;
+    n.subVectors(b, a).cross(tmpTri.subVectors(c, a));
+    const len = n.normalize();
+    if (len < 1e-12) return false;
+    this.faces[0]!.d = n.dot(a);
+    this.faces[1]!.normal.copy(n).negate();
+    this.faces[1]!.d = -this.faces[0]!.d;
+    this.centroid
+      .copy(a)
+      .add(b)
+      .add(c)
+      .scale(1 / 3);
+    this.edgeDataDirty = true;
+    return true;
   }
 
   /** 由点集计算凸包（共面三角形会合并为多边形面） */
@@ -161,6 +243,8 @@ export class ConvexPolyhedron {
     return volume;
   }
 }
+
+const tmpTri = new Vec3();
 
 function makeFace(vertices: readonly Vec3[], loop: number[]): PolyFace {
   // Newell 法求面法线，数值上对非严格共面的多边形也稳健

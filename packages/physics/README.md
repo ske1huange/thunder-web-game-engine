@@ -60,11 +60,41 @@ body.interpolate(alpha, outPosition, outRotation);
 world.destroyBody(body);
 ```
 
-形状：`SphereShape(radius)`、`CapsuleShape(radius, halfHeight)`（沿 Y 轴）、`BoxShape(halfExtents)`、`CylinderShape(radius, halfHeight, segments = 16)`（沿 Y 轴，碰撞几何为正多棱柱近似）、`ConvexHullShape(points)`、`PlaneShape()`（局部法线 +Y，只能用于静态刚体）。
+形状：`SphereShape(radius)`、`CapsuleShape(radius, halfHeight)`（沿 Y 轴）、`BoxShape(halfExtents)`、`CylinderShape(radius, halfHeight, segments = 16)`（沿 Y 轴，碰撞几何为正多棱柱近似）、`ConvexHullShape(points)`、`PlaneShape()`（局部法线 +Y，只能用于静态刚体）、`TriMeshShape`、`HeightfieldShape`（见下一节）。
 
 碰撞过滤与 Box2D 相同：`filter: { categoryBits, maskBits, group }`；`isSensor: true` 的碰撞体只触发 `sensorEnter` / `sensorExit`，不产生碰撞响应。
 
 运动学刚体可以用 `body.moveKinematic(targetPosition, targetRotation, dt)` 驱动。
+
+## 三角网格与高度场（关卡、地形）
+
+静态几何用 `TriMeshShape` 或 `HeightfieldShape`，只能挂在静态或运动学刚体上（运动学网格可做移动平台）。
+
+```ts
+import { HeightfieldShape, TriMeshShape } from '@thunder/physics';
+
+// 三角网格：顶点 [x, y, z, ...] + 下标（从外侧看逆时针为正面）
+const level = world.createBody({ type: 'static' });
+level.addCollider({
+  shape: new TriMeshShape(positions, indices, {
+    doubleSided: false, // 默认单面：从背面进入不会被推出
+    weldTolerance: 1e-5, // 焊接重复顶点，用于识别相邻三角形
+  }),
+});
+
+// 高度场：rows × cols 个采样（行沿 +Z，列沿 +X），局部坐标以原点为中心
+const terrain = world.createBody({ type: 'static' });
+const field = new HeightfieldShape({ heights, rows: 129, cols: 129, cellSize: 1, heightScale: 1 });
+terrain.addCollider({ shape: field });
+field.heightAt(x, z); // 局部坐标处的地面高度
+```
+
+- **BVH**：三角网格按中位数二分建立静态 BVH（TypedArray 平铺），查询与射线检测不分配内存；高度场按格子直接定位，射线用二维 DDA。
+- **内部棱（ghost collision）**：构建时按相邻关系标记每条棱是否“活跃”（凸且不平坦）。物体碰到非活跃棱 / 顶点时，接触改用三角形面法线，或交给相邻三角形处理，因此箱子、球在拼接的地面上滑动、滚动不会被接缝绊住。
+- **多流形**：与网格的接触按法线分组（夹角 < 5° 合并），每组至多 4 个点；`contact.manifolds[0..manifoldCount)`。
+- **查询 / 连续碰撞**：射线、形状投射、重叠查询都支持网格；高速物体对网格做连续碰撞时只考虑质心即将穿过的三角形，避免在起伏地形上“卡顿”。
+
+从 three.js / glTF 模型生成碰撞体见 `@thunder/render` 的 `createTriMeshFromObject`、`createConvexHullFromObject`。
 
 ## 关节
 

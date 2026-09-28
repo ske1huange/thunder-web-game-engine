@@ -2,6 +2,8 @@
 // 使用构建产物（packages/physics/dist），运行：pnpm bench
 import {
   BoxShape,
+  CapsuleShape,
+  HeightfieldShape,
   PlaneShape,
   Quat,
   SphereShape,
@@ -73,6 +75,35 @@ function pyramid(rows) {
   return world;
 }
 
+/** 64×64 起伏高度场上的 200 个混合形状（箱子 / 球 / 胶囊），滚入低洼处堆积 */
+function terrain(count) {
+  const world = new World({ enableSleep: false });
+  const n = 64;
+  const heights = new Float64Array(n * n);
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) heights[r * n + c] = 0.6 * Math.sin(c * 0.3) * Math.cos(r * 0.25);
+  }
+  const ground = world.createBody({ type: 'static' });
+  ground.addCollider({ shape: new HeightfieldShape({ heights, rows: n, cols: n, cellSize: 0.5 }) });
+  const shapes = [
+    new BoxShape(new Vec3(0.4, 0.4, 0.4)),
+    new SphereShape(0.4),
+    new CapsuleShape(0.3, 0.3),
+  ];
+  for (let i = 0; i < count; i++) {
+    const b = world.createBody({
+      position: new Vec3(
+        ((i % 10) - 4.5) * 1.5,
+        2 + Math.floor(i / 100) * 1.5,
+        ((Math.floor(i / 10) % 10) - 4.5) * 1.5,
+      ),
+    });
+    b.addCollider({ shape: shapes[i % 3] });
+  }
+  for (let i = 0; i < 120; i++) world.step(1 / 60);
+  return world;
+}
+
 function measure(name, world, steps = 120) {
   const times = [];
   for (let i = 0; i < steps; i++) {
@@ -83,7 +114,7 @@ function measure(name, world, steps = 120) {
   times.sort((a, b) => a - b);
   const mean = times.reduce((a, b) => a + b, 0) / times.length;
   let points = 0;
-  for (const c of world.contacts) if (c.touching) points += c.manifold.pointCount;
+  for (const c of world.contacts) if (c.touching) points += c.pointCount;
   return {
     场景: name,
     动态刚体: world.bodies.filter((b) => b.isDynamic()).length,
@@ -100,6 +131,7 @@ const rows = [
   measure('500 个箱子堆积', pile(500, 'box')),
   measure('1000 个箱子堆积', pile(1000, 'box')),
   measure('1000 个球堆积', pile(1000, 'sphere')),
+  measure('高度场上 200 个混合形状', terrain(200)),
 ];
 console.log(`Node ${process.version}，1/60 s，4 子步，关闭休眠`);
 console.table(rows);

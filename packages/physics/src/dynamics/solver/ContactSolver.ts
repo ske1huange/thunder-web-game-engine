@@ -71,9 +71,6 @@ export function prepareContacts(contacts: readonly Contact[], ctx: SolverContext
   for (const c of contacts) {
     const bodyA = c.bodyA;
     const bodyB = c.bodyB;
-    const m = c.manifold;
-    const n = m.normal;
-    computeBasis(n, m.tangent1, m.tangent2);
     const soft =
       bodyA.invMass === 0 || bodyB.invMass === 0 ? ctx.staticSoftness : ctx.contactSoftness;
     c.softness.biasRate = soft.biasRate;
@@ -83,87 +80,92 @@ export function prepareContacts(contacts: readonly Contact[], ctx: SolverContext
     const mB = bodyB.invMass;
     const IA = bodyA.invInertiaWorld;
     const IB = bodyB.invInertiaWorld;
-    const t1 = m.tangent1;
-    const t2 = m.tangent2;
     const vA = bodyA.linearVelocity;
     const wA = bodyA.angularVelocity;
     const vB = bodyB.linearVelocity;
     const wB = bodyB.angularVelocity;
 
-    for (let i = 0; i < m.pointCount; i++) {
-      const p = m.points[i]!;
-      const rA = p.anchorA.subVectors(p.point, bodyA.center);
-      const rB = p.anchorB.subVectors(p.point, bodyB.center);
-      p.baseSeparation =
-        p.separation - ((rB.x - rA.x) * n.x + (rB.y - rA.y) * n.y + (rB.z - rA.z) * n.z);
-      const j = p.jacobian;
-      p.normalMass = writeAxis(
-        j,
-        0,
-        rA.x,
-        rA.y,
-        rA.z,
-        rB.x,
-        rB.y,
-        rB.z,
-        n.x,
-        n.y,
-        n.z,
-        IA,
-        IB,
-        mA,
-        mB,
-      );
-      p.tangentMass1 = writeAxis(
-        j,
-        T1,
-        rA.x,
-        rA.y,
-        rA.z,
-        rB.x,
-        rB.y,
-        rB.z,
-        t1.x,
-        t1.y,
-        t1.z,
-        IA,
-        IB,
-        mA,
-        mB,
-      );
-      p.tangentMass2 = writeAxis(
-        j,
-        T2,
-        rA.x,
-        rA.y,
-        rA.z,
-        rB.x,
-        rB.y,
-        rB.z,
-        t2.x,
-        t2.y,
-        t2.z,
-        IA,
-        IB,
-        mA,
-        mB,
-      );
-      // 求解前的相对法向速度（用于弹性）
-      p.relativeVelocity =
-        n.x * (vB.x - vA.x) +
-        n.y * (vB.y - vA.y) +
-        n.z * (vB.z - vA.z) +
-        j[N_RB]! * wB.x +
-        j[N_RB + 1]! * wB.y +
-        j[N_RB + 2]! * wB.z -
-        j[N_RA]! * wA.x -
-        j[N_RA + 1]! * wA.y -
-        j[N_RA + 2]! * wA.z;
-      p.maxNormalImpulse = 0;
-      if (!ctx.enableWarmStarting) {
-        p.normalImpulse = 0;
-        p.tangentImpulse1 = 0;
-        p.tangentImpulse2 = 0;
+    for (let mi = 0; mi < c.manifoldCount; mi++) {
+      const m = c.manifolds[mi]!;
+      const n = m.normal;
+      computeBasis(n, m.tangent1, m.tangent2);
+      const t1 = m.tangent1;
+      const t2 = m.tangent2;
+      for (let i = 0; i < m.pointCount; i++) {
+        const p = m.points[i]!;
+        const rA = p.anchorA.subVectors(p.point, bodyA.center);
+        const rB = p.anchorB.subVectors(p.point, bodyB.center);
+        p.baseSeparation =
+          p.separation - ((rB.x - rA.x) * n.x + (rB.y - rA.y) * n.y + (rB.z - rA.z) * n.z);
+        const j = p.jacobian;
+        p.normalMass = writeAxis(
+          j,
+          0,
+          rA.x,
+          rA.y,
+          rA.z,
+          rB.x,
+          rB.y,
+          rB.z,
+          n.x,
+          n.y,
+          n.z,
+          IA,
+          IB,
+          mA,
+          mB,
+        );
+        p.tangentMass1 = writeAxis(
+          j,
+          T1,
+          rA.x,
+          rA.y,
+          rA.z,
+          rB.x,
+          rB.y,
+          rB.z,
+          t1.x,
+          t1.y,
+          t1.z,
+          IA,
+          IB,
+          mA,
+          mB,
+        );
+        p.tangentMass2 = writeAxis(
+          j,
+          T2,
+          rA.x,
+          rA.y,
+          rA.z,
+          rB.x,
+          rB.y,
+          rB.z,
+          t2.x,
+          t2.y,
+          t2.z,
+          IA,
+          IB,
+          mA,
+          mB,
+        );
+        // 求解前的相对法向速度（用于弹性）
+        p.relativeVelocity =
+          n.x * (vB.x - vA.x) +
+          n.y * (vB.y - vA.y) +
+          n.z * (vB.z - vA.z) +
+          j[N_RB]! * wB.x +
+          j[N_RB + 1]! * wB.y +
+          j[N_RB + 2]! * wB.z -
+          j[N_RA]! * wA.x -
+          j[N_RA + 1]! * wA.y -
+          j[N_RA + 2]! * wA.z;
+        p.maxNormalImpulse = 0;
+        if (!ctx.enableWarmStarting) {
+          p.normalImpulse = 0;
+          p.tangentImpulse1 = 0;
+          p.tangentImpulse2 = 0;
+        }
       }
     }
   }
@@ -173,37 +175,39 @@ export function warmStartContacts(contacts: readonly Contact[]): void {
   for (const c of contacts) {
     const bodyA = c.bodyA;
     const bodyB = c.bodyB;
-    const m = c.manifold;
     const mA = bodyA.invMass;
     const mB = bodyB.invMass;
     const vA = bodyA.linearVelocity;
     const wA = bodyA.angularVelocity;
     const vB = bodyB.linearVelocity;
     const wB = bodyB.angularVelocity;
-    const n = m.normal;
-    const t1 = m.tangent1;
-    const t2 = m.tangent2;
-    for (let i = 0; i < m.pointCount; i++) {
-      const p = m.points[i]!;
-      const j = p.jacobian;
-      const ln = p.normalImpulse;
-      const l1 = p.tangentImpulse1;
-      const l2 = p.tangentImpulse2;
-      const px = n.x * ln + t1.x * l1 + t2.x * l2;
-      const py = n.y * ln + t1.y * l1 + t2.y * l2;
-      const pz = n.z * ln + t1.z * l1 + t2.z * l2;
-      vA.x -= mA * px;
-      vA.y -= mA * py;
-      vA.z -= mA * pz;
-      vB.x += mB * px;
-      vB.y += mB * py;
-      vB.z += mB * pz;
-      wA.x -= j[N_IA]! * ln + j[T1 + N_IA]! * l1 + j[T2 + N_IA]! * l2;
-      wA.y -= j[N_IA + 1]! * ln + j[T1 + N_IA + 1]! * l1 + j[T2 + N_IA + 1]! * l2;
-      wA.z -= j[N_IA + 2]! * ln + j[T1 + N_IA + 2]! * l1 + j[T2 + N_IA + 2]! * l2;
-      wB.x += j[N_IB]! * ln + j[T1 + N_IB]! * l1 + j[T2 + N_IB]! * l2;
-      wB.y += j[N_IB + 1]! * ln + j[T1 + N_IB + 1]! * l1 + j[T2 + N_IB + 1]! * l2;
-      wB.z += j[N_IB + 2]! * ln + j[T1 + N_IB + 2]! * l1 + j[T2 + N_IB + 2]! * l2;
+    for (let mi = 0; mi < c.manifoldCount; mi++) {
+      const m = c.manifolds[mi]!;
+      const n = m.normal;
+      const t1 = m.tangent1;
+      const t2 = m.tangent2;
+      for (let i = 0; i < m.pointCount; i++) {
+        const p = m.points[i]!;
+        const j = p.jacobian;
+        const ln = p.normalImpulse;
+        const l1 = p.tangentImpulse1;
+        const l2 = p.tangentImpulse2;
+        const px = n.x * ln + t1.x * l1 + t2.x * l2;
+        const py = n.y * ln + t1.y * l1 + t2.y * l2;
+        const pz = n.z * ln + t1.z * l1 + t2.z * l2;
+        vA.x -= mA * px;
+        vA.y -= mA * py;
+        vA.z -= mA * pz;
+        vB.x += mB * px;
+        vB.y += mB * py;
+        vB.z += mB * pz;
+        wA.x -= j[N_IA]! * ln + j[T1 + N_IA]! * l1 + j[T2 + N_IA]! * l2;
+        wA.y -= j[N_IA + 1]! * ln + j[T1 + N_IA + 1]! * l1 + j[T2 + N_IA + 1]! * l2;
+        wA.z -= j[N_IA + 2]! * ln + j[T1 + N_IA + 2]! * l1 + j[T2 + N_IA + 2]! * l2;
+        wB.x += j[N_IB]! * ln + j[T1 + N_IB]! * l1 + j[T2 + N_IB]! * l2;
+        wB.y += j[N_IB + 1]! * ln + j[T1 + N_IB + 1]! * l1 + j[T2 + N_IB + 1]! * l2;
+        wB.z += j[N_IB + 2]! * ln + j[T1 + N_IB + 2]! * l1 + j[T2 + N_IB + 2]! * l2;
+      }
     }
   }
 }
@@ -218,8 +222,6 @@ export function solveContacts(
   for (const c of contacts) {
     const bodyA = c.bodyA;
     const bodyB = c.bodyB;
-    const m = c.manifold;
-    const count = m.pointCount;
     const mA = bodyA.invMass;
     const mB = bodyB.invMass;
     const soft = c.softness;
@@ -249,142 +251,147 @@ export function solveContacts(
     const dpx = dpB.x - dpA.x,
       dpy = dpB.y - dpA.y,
       dpz = dpB.z - dpA.z;
-    const n = m.normal;
-    const nx = n.x,
-      ny = n.y,
-      nz = n.z;
-
-    // ---- 法向（非穿透） ----
-    // 求解与 relax 两个阶段以相反顺序遍历接触点，抵消 Gauss-Seidel 顺序带来的不对称
+    // 求解与 relax 两个阶段以相反顺序遍历流形与接触点，抵消 Gauss-Seidel 顺序带来的不对称
     const reverse = !useBias;
-    for (let k = 0; k < count; k++) {
-      const p = m.points[reverse ? count - 1 - k : k]!;
-      const j = p.jacobian;
-      const rA = p.anchorA;
-      const rB = p.anchorB;
-      // 当前锚点 qA·rA、qB·rB（内联四元数旋转）
-      let tx = 2 * (qA.y * rA.z - qA.z * rA.y);
-      let ty = 2 * (qA.z * rA.x - qA.x * rA.z);
-      let tz = 2 * (qA.x * rA.y - qA.y * rA.x);
-      const prAx = rA.x + qA.w * tx + (qA.y * tz - qA.z * ty);
-      const prAy = rA.y + qA.w * ty + (qA.z * tx - qA.x * tz);
-      const prAz = rA.z + qA.w * tz + (qA.x * ty - qA.y * tx);
-      tx = 2 * (qB.y * rB.z - qB.z * rB.y);
-      ty = 2 * (qB.z * rB.x - qB.x * rB.z);
-      tz = 2 * (qB.x * rB.y - qB.y * rB.x);
-      const prBx = rB.x + qB.w * tx + (qB.y * tz - qB.z * ty);
-      const prBy = rB.y + qB.w * ty + (qB.z * tx - qB.x * tz);
-      const prBz = rB.z + qB.w * tz + (qB.x * ty - qB.y * tx);
-      const s =
-        (dpx + prBx - prAx) * nx +
-        (dpy + prBy - prAy) * ny +
-        (dpz + prBz - prAz) * nz +
-        p.baseSeparation;
+    const mCount = c.manifoldCount;
+    for (let mk = 0; mk < mCount; mk++) {
+      const m = c.manifolds[reverse ? mCount - 1 - mk : mk]!;
+      const count = m.pointCount;
+      const n = m.normal;
+      const nx = n.x,
+        ny = n.y,
+        nz = n.z;
 
-      let velocityBias = 0;
-      let massScale = 1;
-      let impulseScale = 0;
-      if (s > 0) {
-        velocityBias = s * invH; // 推测接触
-      } else if (useBias) {
-        velocityBias = Math.max(soft.biasRate * s, -maxBiasVelocity);
-        massScale = soft.massScale;
-        impulseScale = soft.impulseScale;
-      }
-
-      const vn =
-        (vBx - vAx) * nx +
-        (vBy - vAy) * ny +
-        (vBz - vAz) * nz +
-        j[N_RB]! * wBx +
-        j[N_RB + 1]! * wBy +
-        j[N_RB + 2]! * wBz -
-        j[N_RA]! * wAx -
-        j[N_RA + 1]! * wAy -
-        j[N_RA + 2]! * wAz;
-      let impulse =
-        -p.normalMass * massScale * (vn + velocityBias) - impulseScale * p.normalImpulse;
-      const newImpulse = Math.max(p.normalImpulse + impulse, 0);
-      impulse = newImpulse - p.normalImpulse;
-      p.normalImpulse = newImpulse;
-      if (impulse > p.maxNormalImpulse) p.maxNormalImpulse = impulse;
-
-      const px = nx * impulse,
-        py = ny * impulse,
-        pz = nz * impulse;
-      vAx -= mA * px;
-      vAy -= mA * py;
-      vAz -= mA * pz;
-      vBx += mB * px;
-      vBy += mB * py;
-      vBz += mB * pz;
-      wAx -= j[N_IA]! * impulse;
-      wAy -= j[N_IA + 1]! * impulse;
-      wAz -= j[N_IA + 2]! * impulse;
-      wBx += j[N_IB]! * impulse;
-      wBy += j[N_IB + 1]! * impulse;
-      wBz += j[N_IB + 2]! * impulse;
-    }
-
-    // ---- 摩擦（按圆盘截断的库仑锥） ----
-    const friction = c.friction;
-    if (friction > 0) {
-      const t1 = m.tangent1;
-      const t2 = m.tangent2;
+      // ---- 法向（非穿透） ----
       for (let k = 0; k < count; k++) {
         const p = m.points[reverse ? count - 1 - k : k]!;
         const j = p.jacobian;
-        const dvx = vBx - vAx,
-          dvy = vBy - vAy,
-          dvz = vBz - vAz;
-        const vt1 =
-          dvx * t1.x +
-          dvy * t1.y +
-          dvz * t1.z +
-          j[T1 + N_RB]! * wBx +
-          j[T1 + N_RB + 1]! * wBy +
-          j[T1 + N_RB + 2]! * wBz -
-          j[T1 + N_RA]! * wAx -
-          j[T1 + N_RA + 1]! * wAy -
-          j[T1 + N_RA + 2]! * wAz;
-        const vt2 =
-          dvx * t2.x +
-          dvy * t2.y +
-          dvz * t2.z +
-          j[T2 + N_RB]! * wBx +
-          j[T2 + N_RB + 1]! * wBy +
-          j[T2 + N_RB + 2]! * wBz -
-          j[T2 + N_RA]! * wAx -
-          j[T2 + N_RA + 1]! * wAy -
-          j[T2 + N_RA + 2]! * wAz;
-        let new1 = p.tangentImpulse1 - p.tangentMass1 * vt1;
-        let new2 = p.tangentImpulse2 - p.tangentMass2 * vt2;
-        const maxFriction = friction * p.normalImpulse;
-        const lenSq = new1 * new1 + new2 * new2;
-        if (lenSq > maxFriction * maxFriction) {
-          const scale = lenSq > 0 ? maxFriction / Math.sqrt(lenSq) : 0;
-          new1 *= scale;
-          new2 *= scale;
+        const rA = p.anchorA;
+        const rB = p.anchorB;
+        // 当前锚点 qA·rA、qB·rB（内联四元数旋转）
+        let tx = 2 * (qA.y * rA.z - qA.z * rA.y);
+        let ty = 2 * (qA.z * rA.x - qA.x * rA.z);
+        let tz = 2 * (qA.x * rA.y - qA.y * rA.x);
+        const prAx = rA.x + qA.w * tx + (qA.y * tz - qA.z * ty);
+        const prAy = rA.y + qA.w * ty + (qA.z * tx - qA.x * tz);
+        const prAz = rA.z + qA.w * tz + (qA.x * ty - qA.y * tx);
+        tx = 2 * (qB.y * rB.z - qB.z * rB.y);
+        ty = 2 * (qB.z * rB.x - qB.x * rB.z);
+        tz = 2 * (qB.x * rB.y - qB.y * rB.x);
+        const prBx = rB.x + qB.w * tx + (qB.y * tz - qB.z * ty);
+        const prBy = rB.y + qB.w * ty + (qB.z * tx - qB.x * tz);
+        const prBz = rB.z + qB.w * tz + (qB.x * ty - qB.y * tx);
+        const s =
+          (dpx + prBx - prAx) * nx +
+          (dpy + prBy - prAy) * ny +
+          (dpz + prBz - prAz) * nz +
+          p.baseSeparation;
+
+        let velocityBias = 0;
+        let massScale = 1;
+        let impulseScale = 0;
+        if (s > 0) {
+          velocityBias = s * invH; // 推测接触
+        } else if (useBias) {
+          velocityBias = Math.max(soft.biasRate * s, -maxBiasVelocity);
+          massScale = soft.massScale;
+          impulseScale = soft.impulseScale;
         }
-        const d1 = new1 - p.tangentImpulse1;
-        const d2 = new2 - p.tangentImpulse2;
-        p.tangentImpulse1 = new1;
-        p.tangentImpulse2 = new2;
-        const px = t1.x * d1 + t2.x * d2;
-        const py = t1.y * d1 + t2.y * d2;
-        const pz = t1.z * d1 + t2.z * d2;
+
+        const vn =
+          (vBx - vAx) * nx +
+          (vBy - vAy) * ny +
+          (vBz - vAz) * nz +
+          j[N_RB]! * wBx +
+          j[N_RB + 1]! * wBy +
+          j[N_RB + 2]! * wBz -
+          j[N_RA]! * wAx -
+          j[N_RA + 1]! * wAy -
+          j[N_RA + 2]! * wAz;
+        let impulse =
+          -p.normalMass * massScale * (vn + velocityBias) - impulseScale * p.normalImpulse;
+        const newImpulse = Math.max(p.normalImpulse + impulse, 0);
+        impulse = newImpulse - p.normalImpulse;
+        p.normalImpulse = newImpulse;
+        if (impulse > p.maxNormalImpulse) p.maxNormalImpulse = impulse;
+
+        const px = nx * impulse,
+          py = ny * impulse,
+          pz = nz * impulse;
         vAx -= mA * px;
         vAy -= mA * py;
         vAz -= mA * pz;
         vBx += mB * px;
         vBy += mB * py;
         vBz += mB * pz;
-        wAx -= j[T1 + N_IA]! * d1 + j[T2 + N_IA]! * d2;
-        wAy -= j[T1 + N_IA + 1]! * d1 + j[T2 + N_IA + 1]! * d2;
-        wAz -= j[T1 + N_IA + 2]! * d1 + j[T2 + N_IA + 2]! * d2;
-        wBx += j[T1 + N_IB]! * d1 + j[T2 + N_IB]! * d2;
-        wBy += j[T1 + N_IB + 1]! * d1 + j[T2 + N_IB + 1]! * d2;
-        wBz += j[T1 + N_IB + 2]! * d1 + j[T2 + N_IB + 2]! * d2;
+        wAx -= j[N_IA]! * impulse;
+        wAy -= j[N_IA + 1]! * impulse;
+        wAz -= j[N_IA + 2]! * impulse;
+        wBx += j[N_IB]! * impulse;
+        wBy += j[N_IB + 1]! * impulse;
+        wBz += j[N_IB + 2]! * impulse;
+      }
+
+      // ---- 摩擦（按圆盘截断的库仑锥） ----
+      const friction = c.friction;
+      if (friction > 0) {
+        const t1 = m.tangent1;
+        const t2 = m.tangent2;
+        for (let k = 0; k < count; k++) {
+          const p = m.points[reverse ? count - 1 - k : k]!;
+          const j = p.jacobian;
+          const dvx = vBx - vAx,
+            dvy = vBy - vAy,
+            dvz = vBz - vAz;
+          const vt1 =
+            dvx * t1.x +
+            dvy * t1.y +
+            dvz * t1.z +
+            j[T1 + N_RB]! * wBx +
+            j[T1 + N_RB + 1]! * wBy +
+            j[T1 + N_RB + 2]! * wBz -
+            j[T1 + N_RA]! * wAx -
+            j[T1 + N_RA + 1]! * wAy -
+            j[T1 + N_RA + 2]! * wAz;
+          const vt2 =
+            dvx * t2.x +
+            dvy * t2.y +
+            dvz * t2.z +
+            j[T2 + N_RB]! * wBx +
+            j[T2 + N_RB + 1]! * wBy +
+            j[T2 + N_RB + 2]! * wBz -
+            j[T2 + N_RA]! * wAx -
+            j[T2 + N_RA + 1]! * wAy -
+            j[T2 + N_RA + 2]! * wAz;
+          let new1 = p.tangentImpulse1 - p.tangentMass1 * vt1;
+          let new2 = p.tangentImpulse2 - p.tangentMass2 * vt2;
+          const maxFriction = friction * p.normalImpulse;
+          const lenSq = new1 * new1 + new2 * new2;
+          if (lenSq > maxFriction * maxFriction) {
+            const scale = lenSq > 0 ? maxFriction / Math.sqrt(lenSq) : 0;
+            new1 *= scale;
+            new2 *= scale;
+          }
+          const d1 = new1 - p.tangentImpulse1;
+          const d2 = new2 - p.tangentImpulse2;
+          p.tangentImpulse1 = new1;
+          p.tangentImpulse2 = new2;
+          const px = t1.x * d1 + t2.x * d2;
+          const py = t1.y * d1 + t2.y * d2;
+          const pz = t1.z * d1 + t2.z * d2;
+          vAx -= mA * px;
+          vAy -= mA * py;
+          vAz -= mA * pz;
+          vBx += mB * px;
+          vBy += mB * py;
+          vBz += mB * pz;
+          wAx -= j[T1 + N_IA]! * d1 + j[T2 + N_IA]! * d2;
+          wAy -= j[T1 + N_IA + 1]! * d1 + j[T2 + N_IA + 1]! * d2;
+          wAz -= j[T1 + N_IA + 2]! * d1 + j[T2 + N_IA + 2]! * d2;
+          wBx += j[T1 + N_IB]! * d1 + j[T2 + N_IB]! * d2;
+          wBy += j[T1 + N_IB + 1]! * d1 + j[T2 + N_IB + 1]! * d2;
+          wBz += j[T1 + N_IB + 2]! * d1 + j[T2 + N_IB + 2]! * d2;
+        }
       }
     }
 
@@ -421,39 +428,41 @@ export function applyRestitution(contacts: readonly Contact[], ctx: SolverContex
     const wA = bodyA.angularVelocity;
     const vB = bodyB.linearVelocity;
     const wB = bodyB.angularVelocity;
-    const m = c.manifold;
-    const n = m.normal;
-    for (let i = 0; i < m.pointCount; i++) {
-      const p = m.points[i]!;
-      // 只对足够快的接近速度且确实产生过冲量的点处理
-      if (p.relativeVelocity > -threshold || p.maxNormalImpulse === 0) continue;
-      const j = p.jacobian;
-      const vn =
-        n.x * (vB.x - vA.x) +
-        n.y * (vB.y - vA.y) +
-        n.z * (vB.z - vA.z) +
-        j[N_RB]! * wB.x +
-        j[N_RB + 1]! * wB.y +
-        j[N_RB + 2]! * wB.z -
-        j[N_RA]! * wA.x -
-        j[N_RA + 1]! * wA.y -
-        j[N_RA + 2]! * wA.z;
-      let impulse = -p.normalMass * (vn + e * p.relativeVelocity);
-      const newImpulse = Math.max(p.normalImpulse + impulse, 0);
-      impulse = newImpulse - p.normalImpulse;
-      p.normalImpulse = newImpulse;
-      if (impulse > p.maxNormalImpulse) p.maxNormalImpulse = impulse;
-      if (mA > 0) {
-        vA.addScaled(n, -mA * impulse);
-        wA.x -= j[N_IA]! * impulse;
-        wA.y -= j[N_IA + 1]! * impulse;
-        wA.z -= j[N_IA + 2]! * impulse;
-      }
-      if (mB > 0) {
-        vB.addScaled(n, mB * impulse);
-        wB.x += j[N_IB]! * impulse;
-        wB.y += j[N_IB + 1]! * impulse;
-        wB.z += j[N_IB + 2]! * impulse;
+    for (let mi = 0; mi < c.manifoldCount; mi++) {
+      const m = c.manifolds[mi]!;
+      const n = m.normal;
+      for (let i = 0; i < m.pointCount; i++) {
+        const p = m.points[i]!;
+        // 只对足够快的接近速度且确实产生过冲量的点处理
+        if (p.relativeVelocity > -threshold || p.maxNormalImpulse === 0) continue;
+        const j = p.jacobian;
+        const vn =
+          n.x * (vB.x - vA.x) +
+          n.y * (vB.y - vA.y) +
+          n.z * (vB.z - vA.z) +
+          j[N_RB]! * wB.x +
+          j[N_RB + 1]! * wB.y +
+          j[N_RB + 2]! * wB.z -
+          j[N_RA]! * wA.x -
+          j[N_RA + 1]! * wA.y -
+          j[N_RA + 2]! * wA.z;
+        let impulse = -p.normalMass * (vn + e * p.relativeVelocity);
+        const newImpulse = Math.max(p.normalImpulse + impulse, 0);
+        impulse = newImpulse - p.normalImpulse;
+        p.normalImpulse = newImpulse;
+        if (impulse > p.maxNormalImpulse) p.maxNormalImpulse = impulse;
+        if (mA > 0) {
+          vA.addScaled(n, -mA * impulse);
+          wA.x -= j[N_IA]! * impulse;
+          wA.y -= j[N_IA + 1]! * impulse;
+          wA.z -= j[N_IA + 2]! * impulse;
+        }
+        if (mB > 0) {
+          vB.addScaled(n, mB * impulse);
+          wB.x += j[N_IB]! * impulse;
+          wB.y += j[N_IB + 1]! * impulse;
+          wB.z += j[N_IB + 2]! * impulse;
+        }
       }
     }
   }

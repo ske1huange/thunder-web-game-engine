@@ -101,9 +101,42 @@ view.setAppearance(body, {
 });
 view.sync(alpha); // 每帧：按插值系数同步位姿，自动增删网格
 
+// 关卡模型由游戏自己渲染时，可以只用它生成碰撞体、不再重复显示
+view.setAppearance(levelBody, { visible: false });
+
 const debug = new ThreeDebugRenderer(); // DebugDrawer 的 three.js 实现
 pipeline.scene.add(debug.object);
 debug.begin();
 world.debugDraw(debug, { contacts: true });
 debug.end();
+```
+
+`PhysicsView` 会为三角网格（平直着色）与高度场（平滑法线）生成网格；双面三角网格使用双面材质。
+
+## 从 three.js / glTF 生成碰撞体
+
+```ts
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import {
+  collectTriangles,
+  createConvexHullFromObject,
+  createTriMeshFromGeometry,
+  createTriMeshFromObject,
+} from '@thunder/render';
+
+const gltf = await new GLTFLoader().loadAsync('level.glb');
+scene.add(gltf.scene);
+
+// 静态关卡：收集所有网格（含 InstancedMesh 的每个实例），缩放 / 镜像已烘焙
+const level = world.createBody({ type: 'static' });
+level.addCollider({
+  shape: createTriMeshFromObject(gltf.scene, {
+    relativeTo: null, // 世界坐标（默认是对象自身的局部坐标）
+    filter: (mesh) => !mesh.name.endsWith('_nocollide'),
+  }),
+});
+
+// 动态道具：用模型顶点生成近似凸包（maxPoints 控制复杂度）
+const rock = world.createBody({ position });
+rock.addCollider({ shape: createConvexHullFromObject(rockModel, { maxPoints: 32 }) });
 ```

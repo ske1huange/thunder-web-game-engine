@@ -1,7 +1,23 @@
-import type { Transform } from '../../math/Transform';
+import { AABB } from '../../math/AABB';
+import { Transform } from '../../math/Transform';
 import { Vec3 } from '../../math/Vec3';
+import type { MeshShape } from '../../shapes/MeshShape';
 import { type Shape, ShapeType } from '../../shapes/Shape';
 import { DistanceOutput, DistanceProxy, gjkDistance } from './GJK';
+
+/**
+ * 连续碰撞检测对网格投射时的附加信息。
+ *
+ * 为避免高速物体在起伏的网格上“卡顿”（本步内接触到前方三角形而被回退），
+ * 只有质心本步结束时距三角形平面不足 0.5 × minExtent（即将深度穿透或穿过）的三角形才参与投射；
+ * 起点已接触（t = 0）时改用质心处半径 0.25 × minExtent 的小球投射（参考 Box2D v3）。
+ */
+export interface ContinuousCastInfo {
+  /** 起点处刚体质心（世界坐标） */
+  centroid: Readonly<Vec3>;
+  /** 刚体最小半边长 */
+  minExtent: number;
+}
 
 export class ShapeCastOutput {
   /** 命中参数（0..maxT），位移 = t * translation */
@@ -73,8 +89,13 @@ export function shapeCastProxies(
 const castProxyA = new DistanceProxy();
 const castProxyB = new DistanceProxy();
 
+function isMesh(shape: Shape): boolean {
+  return shape.type === ShapeType.TriMesh || shape.type === ShapeType.Heightfield;
+}
+
 /**
- * 形状 A（初始变换 xfA）沿 translation 平移，对静止形状 B 做投射。支持平面作为 B。
+ * 形状 A（初始变换 xfA）沿 translation 平移，对静止形状 B 做投射。
+ * 支持平面、三角网格与高度场作为 B（单面网格只会被正面命中）。
  */
 export function shapeCast(
   shapeA: Shape,
@@ -85,8 +106,22 @@ export function shapeCast(
   maxT: number,
   target: number,
   out: ShapeCastOutput,
+  continuous?: ContinuousCastInfo,
 ): boolean {
-  if (shapeA.type === ShapeType.Plane) return false;
+  if (shapeA.type === ShapeType.Plane || isMesh(shapeA)) return false;
+  if (isMesh(shapeB)) {
+    return castAgainstMesh(
+      shapeA,
+      xfA,
+      translation,
+      shapeB as MeshShape,
+      xfB,
+      maxT,
+      target,
+      out,
+      continuous,
+    );
+  }
   if (shapeB.type === ShapeType.Plane) {
     // 平面：分离距离关于 t 线性，直接求解
     xfB.rotation.rotate(UP, planeN);
@@ -120,4 +155,88 @@ export function shapeCast(
   castProxyA.setShape(shapeA, xfA);
   castProxyB.setShape(shapeB, xfB);
   return shapeCastProxies(castProxyA, translation, castProxyB, maxT, target, out);
+}
+
+const meshRel = new Transform();
+const meshTrans = new Vec3();
+const sweepAabb = new AABB();
+const endAabb = new AABB();
+const triPts = [new Vec3(), new Vec3(), new Vec3()];
+const triProxy = new DistanceProxy();
+const localProxy = new DistanceProxy();
+const coreProxy = new DistanceProxy();
+const triOut = new ShapeCastOutput();
+const triN = new Vec3();
+const e1 = new Vec3();
+const e2 = new Vec3();
+const cStart = new Vec3();
+const cEnd = new Vec3();
+const corePts = [new Vec3()];
+
+function castAgainstMesh(
+  shapeA: Shape,
+  xfA: Readonly<Transform>,
+  translation: Readonly<Vec3>,
+  mesh: MeshShape,
+  xfMesh: Readonly<Transform>,
+  maxT: number,
+  target: number,
+  out: ShapeCastOutput,
+  continuous: ContinuousCastInfo | undefined,
+): boolean {
+  // 在网格局部坐标系中计算
+  meshRel.multiplyInverseA(xfMesh, xfA);
+  xfMesh.inverseTransformVector(translation, meshTrans);
+  shapeA.computeAABB(meshRel, sweepAabb);
+  endAabb.copy(sweepAabb);
+  tmp.copy(meshTrans).scale(maxT);
+  endAabb.min.add(tmp);
+  endAabb.max.add(tmp);
+  sweepAabb.union(sweepAabb, endAabb).expandByScalar(target);
+  localProxy.setShape(shapeA, meshRel);
+  const doubleSided = mesh.doubleSided;
+  if (continuous) {
+    xfMesh.inverseTransformPoint(continuous.centroid, cStart);
+    cEnd.copy(cStart).addScaled(meshTrans, maxT);
+    corePts[0]!.copy(cStart);
+    coreProxy.setPointsRef(corePts, 0.25 * continuous.minExtent, 1);
+  }
+
+  let best = maxT;
+  let found = false;
+  mesh.queryTriangles(sweepAabb, (tri) => {
+    const a = triPts[0]!;
+    const b = triPts[1]!;
+    const c = triPts[2]!;
+    mesh.getTriangle(tri, a, b, c);
+    triN.crossVectors(e1.subVectors(b, a), e2.subVectors(c, a));
+    if (triN.normalize() < 1e-12) return;
+    let rate = triN.dot(meshTrans);
+    if (rate > 0) {
+      if (!doubleSided) return; // 单面：从背面穿过
+      triN.negate();
+      rate = -rate;
+    }
+    if (rate === 0) return;
+    if (continuous) {
+      const d1 = e1.subVectors(cStart, a).dot(triN);
+      const d2 = e1.subVectors(cEnd, a).dot(triN);
+      if (d1 < 0 || d2 >= 0.5 * continuous.minExtent) return;
+    }
+    triProxy.setPointsRef(triPts, 0, 3);
+    if (!shapeCastProxies(localProxy, meshTrans, triProxy, best, target, triOut)) return;
+    if (continuous && triOut.t === 0) {
+      if (!shapeCastProxies(coreProxy, meshTrans, triProxy, best, target, triOut)) return;
+      if (triOut.t === 0) return;
+    }
+    if (!found || triOut.t < best) {
+      found = true;
+      best = triOut.t;
+      out.t = triOut.t;
+      out.iterations = triOut.iterations;
+      xfMesh.transformVector(triOut.normal, out.normal);
+      xfMesh.transformPoint(triOut.point, out.point);
+    }
+  });
+  return found;
 }

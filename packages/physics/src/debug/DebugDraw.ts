@@ -6,6 +6,7 @@ import type { AABB } from '../math/AABB';
 import { Transform } from '../math/Transform';
 import { Vec3 } from '../math/Vec3';
 import type { CapsuleShape } from '../shapes/CapsuleShape';
+import type { MeshShape } from '../shapes/MeshShape';
 import { ShapeType } from '../shapes/Shape';
 
 /**
@@ -140,6 +141,20 @@ export function drawCollider(
       }
       break;
     }
+    case ShapeType.TriMesh:
+    case ShapeType.Heightfield: {
+      const mesh = shape as MeshShape;
+      for (let t = 0; t < mesh.triangleCount; t++) {
+        mesh.getTriangle(t, a, b, c);
+        xf.transformPoint(a, a);
+        xf.transformPoint(b, b);
+        xf.transformPoint(c, c);
+        drawer.drawLine(a, b, color);
+        drawer.drawLine(b, c, color);
+        drawer.drawLine(c, a, color);
+      }
+      break;
+    }
     default: {
       const hull = shape.hull;
       if (!hull) break;
@@ -227,12 +242,14 @@ export function debugDrawWorld(
   if (contacts) {
     for (const contact of world.contacts) {
       if (!contact.touching || contact.isSensor) continue;
-      const m = contact.manifold;
-      for (let i = 0; i < m.pointCount; i++) {
-        const p = m.points[i]!.point;
-        drawer.drawPoint?.(p, 4, DebugColors.contactPoint);
-        c.copy(p).addScaled(m.normal, 0.3);
-        drawer.drawLine(p, c, DebugColors.contactNormal);
+      for (let mi = 0; mi < contact.manifoldCount; mi++) {
+        const m = contact.manifolds[mi]!;
+        for (let i = 0; i < m.pointCount; i++) {
+          const p = m.points[i]!.point;
+          drawer.drawPoint?.(p, 4, DebugColors.contactPoint);
+          c.copy(p).addScaled(m.normal, 0.3);
+          drawer.drawLine(p, c, DebugColors.contactNormal);
+        }
       }
     }
   }

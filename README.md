@@ -8,7 +8,7 @@
 | -------------------------------------- | -------------------------------------------------------------------------------- |
 | [`@thunder/physics`](packages/physics) | **Thunder Physics**：纯 TypeScript 编写、零运行时依赖的 3D 刚体物理引擎          |
 | [`@thunder/render`](packages/render)   | **Thunder Render**：基于 three.js 的渲染层——多光源与阴影、后期调色、物理世界同步 |
-| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（11 个 demo）                                      |
+| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（12 个 demo）                                      |
 
 ## Thunder Physics 特性
 
@@ -16,6 +16,7 @@
 
 - **刚体**：动态 / 静态 / 运动学，一个刚体可挂多个碰撞体（复合形状），质量属性按密度自动计算（平行轴定理）
 - **形状**：球、胶囊、长方体、圆柱、任意点集凸包（增量凸包 + 共面合并）、无限平面
+- **角色控制器**：碰撞并滑动、坡度限制、自动上台阶、贴地、移动平台、推动物体、穿透恢复
 - **关卡与地形**：三角网格（BVH 加速、单面 / 双面、内部棱“幽灵碰撞”消除）、高度场（DDA 射线）、多流形接触；可由 three.js / glTF 模型直接生成碰撞体
 - **碰撞检测**
   - 宽相：静态 / 动态双 AABB 树（移植 Box2D 动态树：扩展包围盒、SAH 插入、AVL 旋转）
@@ -138,6 +139,7 @@ packages/physics/        物理引擎
   src/collision/         宽相（AABB 树）、窄相（SAT、GJK、形状投射）、接触流形
   src/dynamics/          刚体、碰撞体、接触管理、求解器、关节
   src/world/             World：模拟主循环、休眠、连续碰撞、事件
+  src/character/         角色控制器
   src/query/             射线、AABB、重叠、形状投射查询
   src/debug/             调试绘制接口
   test/                  单元测试与物理行为测试（Vitest）
@@ -154,7 +156,7 @@ docs/                    架构说明与参考项目调研
 ## 路线图
 
 - 性能：结构体数组（SoA）数据布局、约束图着色 + Web Worker 并行、WebAssembly SIMD
-- 功能：角色控制器（character mover）、射线车辆、锥形 / 6 自由度关节、Web Worker 运行、序列化与快照回放
+- 功能：射线车辆、锥形 / 6 自由度关节、Web Worker 运行、序列化与快照回放
 - 渲染：级联阴影（CSM）、泛光（Bloom）、屏幕空间环境光遮蔽（SSAO）、实时调节面板
 - 引擎其余部分：ECS、资源管理、音频等包
 

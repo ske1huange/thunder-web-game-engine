@@ -63,6 +63,8 @@ let stepTimeAvg = 0;
 const infoEl = document.getElementById('info')!;
 
 function loadDemo(demo: Demo): void {
+  hooks.dispose?.();
+  hooks = {};
   if (view) {
     scene.remove(view.root);
     view.clear();
@@ -90,6 +92,7 @@ function loadDemo(demo: Demo): void {
     setInfo: (text) => {
       infoEl.textContent = text;
     },
+    camera,
   });
   hooks = typeof result === 'function' ? { update: result } : (result ?? {});
   const cam = demo.camera ?? { position: [12, 8, 14], target: [0, 2, 0] };
@@ -182,7 +185,9 @@ function shootBall(): void {
 
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement) return;
-  switch (e.key.toLowerCase()) {
+  const key = e.key.toLowerCase();
+  if (current.keys?.includes(key)) return;
+  switch (key) {
     case ' ':
       e.preventDefault();
       shootBall();
@@ -276,6 +281,7 @@ function updateStats(): void {
 // 主循环
 // ---------------------------------------------------------------------------
 const timer = new THREE.Timer();
+const followDelta = new THREE.Vector3();
 let statsTimer = 0;
 
 function frame(): void {
@@ -299,6 +305,14 @@ function frame(): void {
   stepOnce = false;
   const alpha = paused ? 1 : accumulator / FIXED_DT;
   view.sync(alpha);
+
+  // 相机跟随：目标点与相机一起平移，保持 OrbitControls 的视角
+  const follow = hooks.follow?.(alpha);
+  if (follow) {
+    followDelta.set(follow.x, follow.y, follow.z).sub(controls.target);
+    camera.position.add(followDelta);
+    controls.target.add(followDelta);
+  }
 
   overlayRenderer.begin();
   hooks.render?.();

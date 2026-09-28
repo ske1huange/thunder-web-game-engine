@@ -39,6 +39,7 @@ const planeN = new Vec3();
  * 线性形状投射：代理 A 沿 translation 平移，B 静止。
  * 使用保守推进（conservative advancement）：每次用 GJK 求最近距离与法线，
  * 沿法线的接近速度推进 t，保证不会越过接触（参考 Box2D v3 b2ShapeCast）。
+ * 起点已在 target 距离内时，若平移方向朝向对方则返回 t = 0，否则视为不命中（贴着表面滑动）。
  *
  * @param target 希望停下时两表面的间距（一般取 linearSlop）
  * @returns 是否在 [0, maxT] 内命中
@@ -60,6 +61,10 @@ export function shapeCastProxies(
     gjkDistance(movedA, proxyB, false, gjkOut);
     const sep = gjkOut.distance - totalRadius;
     if (sep < target + tolerance) {
+      // 起点已接触但平移方向不朝向对方（离开或相切）：凸体间距离关于 t 是凸函数，之后不会再接近
+      if (iter === 0 && gjkOut.distance > 1e-12 && translation.dot(gjkOut.normal) <= 0) {
+        return false;
+      }
       out.t = t;
       if (gjkOut.distance > 1e-12) {
         out.normal.copy(gjkOut.normal);
@@ -139,8 +144,10 @@ export function shapeCast(
     const sep = minH - shapeA.radius;
     const rate = translation.dot(planeN);
     let t: number;
-    if (sep <= target) t = 0;
-    else {
+    if (sep <= target) {
+      if (rate >= 0) return false; // 贴着平面且不朝向它移动
+      t = 0;
+    } else {
       if (rate >= 0) return false;
       t = (sep - target) / -rate;
       if (t > maxT) return false;

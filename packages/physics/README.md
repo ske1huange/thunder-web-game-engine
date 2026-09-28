@@ -96,6 +96,47 @@ field.heightAt(x, z); // 局部坐标处的地面高度
 
 从 three.js / glTF 模型生成碰撞体见 `@thunder/render` 的 `createTriMeshFromObject`、`createConvexHullFromObject`。
 
+## 角色控制器
+
+`CharacterController` 是运动学角色（不参与刚体求解），每次 `move` 用形状投射做“碰撞并滑动”。
+
+```ts
+import { CharacterController, Vec3 } from '@thunder/physics';
+
+const player = new CharacterController(world, {
+  position: new Vec3(0, 1, 0), // 形状中心；默认形状为胶囊（半径 0.3、半高 0.6，总高 1.8 m）
+  maxSlopeAngle: Math.PI / 4, // 可行走的最大坡度
+  stepHeight: 0.3, // 自动迈上的台阶高度
+  snapDistance: 0.3, // 下坡 / 下台阶时贴地的距离
+  skinWidth: 0.02, // 与表面保持的间隙
+  mass: 70, // 推动动态刚体、压在动态刚体上的重量
+});
+
+// 每个固定步（world.step 之前）
+const velocity = new Vec3();
+function update(dt: number, input: Vec3, jump: boolean) {
+  velocity.x = input.x * 4;
+  velocity.z = input.z * 4;
+  if (player.isGrounded) velocity.y = jump ? 6 : 0;
+  else velocity.y -= 9.81 * dt;
+  if (player.hitCeiling && velocity.y > 0) velocity.y = 0;
+  player.move(new Vec3().copy(velocity).scale(dt), dt);
+}
+
+player.isGrounded; // 是否站在可行走的表面上
+player.groundNormal; // 地面法线
+player.groundBody; // 脚下的刚体（移动平台会带着角色走）
+player.hits; // 本次移动碰到的物体（碰撞点、法线）
+player.velocity; // 实际速度
+player.interpolate(alpha, out); // 渲染插值
+```
+
+- 墙角折线处理、陡坡按墙处理（上不去；在陡坡上会滑下）、落在缓坡上不会下滑
+- 自动迈上台阶（上 → 前 → 下三段投射，台阶边缘额外用射线确认顶面）
+- 贴地：下坡、下楼梯时吸附到地面，不会腾空
+- 站在运动学 / 动态刚体上随之移动；推动动态刚体；站在动态刚体上施加重量（例如跷跷板）
+- 默认创建一个运动学刚体代表角色，动态物体会被角色挡住（`createBody: false` 关闭）
+
 ## 关节
 
 ```ts

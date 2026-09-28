@@ -16,3 +16,4 @@ export {
 export { EventEmitter } from './events/EventEmitter';
 export * from './query';
 export * from './debug';
+export * from './character';

@@ -1,4 +1,5 @@
 import { chain } from './chain';
+import { character } from './character';
 import { dominoes } from './dominoes';
 import { lights } from './lights';
 import { machines } from './machines';
@@ -23,5 +24,6 @@ export const demos: Demo[] = [
   wall,
   lights,
   terrain,
+  character,
 ];
 export type { Demo } from './types';

@@ -28,6 +28,10 @@ export class ConvexPolyhedron {
   readonly edges: readonly PolyEdge[];
   /** 内部参考点（顶点平均值），用于确定棱-棱分离轴方向 */
   readonly centroid: Vec3;
+  /** 每条棱的方向 b - a（与 edges 一一对应） */
+  readonly edgeDirs: readonly Vec3[];
+  /** 每条棱在高斯图上的弧平面法线 cross(n_faceB, n_faceA)，用于 SAT 剪枝 */
+  readonly edgeArcNormals: readonly Vec3[];
 
   constructor(vertices: Vec3[], faceLoops: number[][]) {
     this.vertices = vertices;
@@ -41,6 +45,10 @@ export class ConvexPolyhedron {
     for (const v of vertices) c.add(v);
     c.scale(1 / vertices.length);
     this.centroid = c;
+    this.edgeDirs = this.edges.map((e) => new Vec3().subVectors(vertices[e.b]!, vertices[e.a]!));
+    this.edgeArcNormals = this.edges.map((e) =>
+      new Vec3().crossVectors(faces[e.faceB]!.normal, faces[e.faceA]!.normal),
+    );
   }
 
   /** 长方体（半边长 hx, hy, hz） */

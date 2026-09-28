@@ -526,27 +526,8 @@ function ensureB(n: number, arr: Vec3[]): void {
   while (arr.length < n) arr.push(new Vec3());
 }
 
-function isMinkowskiFace(
-  a: Readonly<Vec3>,
-  b: Readonly<Vec3>,
-  bxa: Readonly<Vec3>,
-  c: Readonly<Vec3>,
-  d: Readonly<Vec3>,
-  dxc: Readonly<Vec3>,
-): boolean {
-  const cba = c.dot(bxa);
-  const dba = d.dot(bxa);
-  const adc = a.dot(dxc);
-  const bdc = b.dot(dxc);
-  return cba * dba < 0 && adc * bdc < 0 && cba * bdc > 0;
-}
-
-const gA = new Vec3();
-const gB = new Vec3();
-const gC = new Vec3();
-const gD = new Vec3();
-const gBxA = new Vec3();
-const gDxC = new Vec3();
+const edgeDirsB: Vec3[] = [];
+const arcNormalsB: Vec3[] = [];
 
 export function collideHulls(
   hullA: ConvexPolyhedron,
@@ -612,58 +593,63 @@ export function collideHulls(
   }
 
   // ---- 棱-棱 ----
+  // 预先把 B 的棱方向与高斯弧法线变换到 A 的坐标系；内层循环只剩 4 次点积的剪枝测试
+  const edgesA = hullA.edges;
+  const edgesB = hullB.edges;
+  const neB = edgesB.length;
+  ensureB(neB, edgeDirsB);
+  ensureB(neB, arcNormalsB);
+  for (let j = 0; j < neB; j++) {
+    relXf.transformVector(hullB.edgeDirs[j]!, edgeDirsB[j]!);
+    relXf.transformVector(hullB.edgeArcNormals[j]!, arcNormalsB[j]!);
+  }
+  const dirsA = hullA.edgeDirs;
+  const arcsA = hullA.edgeArcNormals;
+  const cA = hullA.centroid;
   let sepE = -Infinity;
   let edgeA = -1;
   let edgeB = -1;
-  const edgesA = hullA.edges;
-  const edgesB = hullB.edges;
   for (let i = 0; i < edgesA.length; i++) {
     const ea = edgesA[i]!;
+    const nA1 = facesA[ea.faceA]!.normal;
+    const nA2 = facesA[ea.faceB]!.normal;
+    const bxa = arcsA[i]!;
+    const eA = dirsA[i]!;
     const pa = vertsA[ea.a]!;
-    const qa = vertsA[ea.b]!;
-    gA.copy(facesA[ea.faceA]!.normal);
-    gB.copy(facesA[ea.faceB]!.normal);
-    gBxA.crossVectors(gB, gA);
-    const eAx = qa.x - pa.x,
-      eAy = qa.y - pa.y,
-      eAz = qa.z - pa.z;
-    for (let j = 0; j < edgesB.length; j++) {
+    for (let j = 0; j < neB; j++) {
       const eb = edgesB[j]!;
-      gC.copy(normalsB[eb.faceA]!).negate();
-      gD.copy(normalsB[eb.faceB]!).negate();
-      gDxC.crossVectors(gD, gC);
-      if (!isMinkowskiFace(gA, gB, gBxA, gC, gD, gDxC)) continue;
-      const pb = vertsB[eb.a]!;
-      const qb = vertsB[eb.b]!;
-      const eBx = qb.x - pb.x,
-        eBy = qb.y - pb.y,
-        eBz = qb.z - pb.z;
-      let ax = eAy * eBz - eAz * eBy;
-      let ay = eAz * eBx - eAx * eBz;
-      let az = eAx * eBy - eAy * eBx;
+      const nB1 = normalsB[eb.faceA]!;
+      const nB2 = normalsB[eb.faceB]!;
+      // 高斯图测试：c = -nB1, d = -nB2, d×c = nB2×nB1
+      const cba = -(nB1.x * bxa.x + nB1.y * bxa.y + nB1.z * bxa.z);
+      const dba = -(nB2.x * bxa.x + nB2.y * bxa.y + nB2.z * bxa.z);
+      if (cba * dba >= 0) continue;
+      const dxc = arcNormalsB[j]!;
+      const adc = nA1.x * dxc.x + nA1.y * dxc.y + nA1.z * dxc.z;
+      const bdc = nA2.x * dxc.x + nA2.y * dxc.y + nA2.z * dxc.z;
+      if (adc * bdc >= 0 || cba * bdc <= 0) continue;
+      const eB = edgeDirsB[j]!;
+      let ax = eA.y * eB.z - eA.z * eB.y;
+      let ay = eA.z * eB.x - eA.x * eB.z;
+      let az = eA.x * eB.y - eA.y * eB.x;
       const len = Math.sqrt(ax * ax + ay * ay + az * az);
-      const scale = Math.sqrt(
-        (eAx * eAx + eAy * eAy + eAz * eAz) * (eBx * eBx + eBy * eBy + eBz * eBz),
-      );
-      if (len < 1e-5 * scale) continue; // 平行棱
+      if (len < 1e-5 * Math.sqrt(eA.lengthSq() * eB.lengthSq())) continue; // 平行棱
       ax /= len;
       ay /= len;
       az /= len;
-      const cx = pa.x - hullA.centroid.x,
-        cy = pa.y - hullA.centroid.y,
-        cz = pa.z - hullA.centroid.z;
-      if (ax * cx + ay * cy + az * cz < 0) {
+      if (ax * (pa.x - cA.x) + ay * (pa.y - cA.y) + az * (pa.z - cA.z) < 0) {
         ax = -ax;
         ay = -ay;
         az = -az;
       }
-      const s = ax * (pb.x - pa.x) + ay * (pb.y - pa.y) + az * (pb.z - pa.z);
-      if (s > sepE) {
-        sepE = s;
+      const pb = vertsB[eb.a]!;
+      const sep = ax * (pb.x - pa.x) + ay * (pb.y - pa.y) + az * (pb.z - pa.z);
+      if (sep > sepE) {
+        sepE = sep;
         edgeA = i;
         edgeB = j;
         edgeAxisBest.set(ax, ay, az);
-        if (s > spec) return;
+        if (sep > spec) return;
       }
     }
   }

@@ -24,6 +24,11 @@ export class ManifoldPoint {
   // ---- 求解器临时量（每步重算） ----
   readonly anchorA = new Vec3();
   readonly anchorB = new Vec3();
+  /**
+   * 求解器预计算的雅可比数据（锚点在一步内固定，雅可比为常量）：
+   * [rA×n, rB×n, IA⁻¹(rA×n), IB⁻¹(rB×n)] 以及两个切向的同样四组，共 36 个数。
+   */
+  readonly jacobian = new Float64Array(36);
   baseSeparation = 0;
   normalMass = 0;
   tangentMass1 = 0;

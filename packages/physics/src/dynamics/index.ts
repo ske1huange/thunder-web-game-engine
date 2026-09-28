@@ -10,4 +10,4 @@ export { Contact } from './Contact';
 export { ContactManager } from './ContactManager';
 export { Softness, makeSoft } from './solver/Softness';
 export { SolverContext } from './solver/SolverContext';
-export { Joint, type JointOptions } from './joints/Joint';
+export * from './joints';

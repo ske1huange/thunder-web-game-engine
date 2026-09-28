@@ -256,6 +256,21 @@ describe('过滤、运动学与连续碰撞', () => {
     expect(bullet.position.x).toBeLessThan(5);
   });
 
+  it('连续碰撞不会把贴地高速滑行的物体钉在原地', () => {
+    const world = makeWorld();
+    // 半径 5cm 的小球以 10m/s 贴地滑行：每步位移远大于 CCD 阈值，且起点已与地面接触
+    const puck = world.createBody({
+      position: new Vec3(0, 0.05, 0),
+      linearVelocity: new Vec3(10, 0, 0),
+    });
+    puck.addCollider({ shape: new SphereShape(0.05), friction: 0 });
+    const tail = world.createBody({ position: new Vec3(-0.2, 0.05, 0), linearVelocity: new Vec3(10, 0, 0) });
+    tail.addCollider({ shape: new SphereShape(0.05), friction: 0 });
+    run(world, 30);
+    expect(puck.position.x).toBeGreaterThan(4.5);
+    expect(tail.position.x).toBeGreaterThan(4.3);
+  });
+
   it('子弹对动态物体也做连续碰撞', () => {
     const world = new World({ gravity: new Vec3(0, 0, 0) });
     const target = world.createBody({ position: new Vec3(5, 0, 0) });

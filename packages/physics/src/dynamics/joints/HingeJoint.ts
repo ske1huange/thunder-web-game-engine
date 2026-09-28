@@ -1,5 +1,5 @@
 import { Quat } from '../../math/Quat';
-import { Vec3 } from '../../math/Vec3';
+import { computeBasis, Vec3 } from '../../math/Vec3';
 import { Softness } from '../solver/Softness';
 import type { SolverContext } from '../solver/SolverContext';
 import { initAnchors, solvePointConstraint } from './BallSocketJoint';
@@ -21,8 +21,6 @@ export interface HingeJointOptions extends JointOptions {
   localAnchorB?: Readonly<Vec3>;
   /** bodyA 局部坐标系中的铰链轴 */
   localAxisA?: Readonly<Vec3>;
-  /** bodyB 局部坐标系中的铰链轴 */
-  localAxisB?: Readonly<Vec3>;
   enableLimit?: boolean;
   /** 角度下限（弧度） */
   lowerAngle?: number;
@@ -44,17 +42,37 @@ export interface HingeJointOptions extends JointOptions {
 const rA = new Vec3();
 const rB = new Vec3();
 const a = new Vec3();
-const p = new Vec3();
-const q = new Vec3();
 const j1 = new Vec3();
 const j2 = new Vec3();
 const L = new Vec3();
-const refA = new Vec3();
-const refB = new Vec3();
+const swingVec = new Vec3();
 const tv = new Vec3();
 const qA = new Quat();
 const qB = new Quat();
+const qE = new Quat();
+const twist = new Quat();
 const spring = new Softness();
+
+const TWO_PI = Math.PI * 2;
+
+/**
+ * 由相对误差旋转 qE（世界系）与铰链轴 axis 分解出扭转角（绕轴，[-π, π]），
+ * 并把摆动部分的旋转向量写入 swingOut。
+ */
+function swingTwist(e: Quat, axis: Readonly<Vec3>, swingOut: Vec3): number {
+  const d = e.x * axis.x + e.y * axis.y + e.z * axis.z;
+  let angle = 2 * Math.atan2(d, e.w);
+  if (angle > Math.PI) angle -= TWO_PI;
+  else if (angle < -Math.PI) angle += TWO_PI;
+  twist.set(axis.x * d, axis.y * d, axis.z * d, e.w);
+  if (twist.lengthSq() < 1e-18) twist.identity();
+  else twist.normalize();
+  // swing = e * twist⁻¹
+  twist.conjugate();
+  twist.premultiply(e);
+  twist.toRotationVector(swingOut);
+  return angle;
+}
 
 /**
  * 铰链关节（旋转关节）：锚点重合，两刚体只能绕公共轴相对转动。
@@ -63,14 +81,13 @@ const spring = new Softness();
 export class HingeJoint extends Joint {
   readonly localAnchorA = new Vec3();
   readonly localAnchorB = new Vec3();
+  /** bodyA 局部坐标系中的铰链轴 */
   readonly localAxisA = new Vec3(0, 1, 0);
-  readonly localAxisB = new Vec3(0, 1, 0);
-  /** 测量角度的参考方向（与轴垂直） */
-  private readonly localRefA = new Vec3();
-  private readonly localRefB = new Vec3();
-  /** B 上与轴垂直的两个方向，用于锁定另外两个转动自由度 */
-  private readonly localPerpB1 = new Vec3();
-  private readonly localPerpB2 = new Vec3();
+  /** 创建时的相对旋转 qA⁻¹ qB，对应铰链角 0 */
+  readonly relativeRotation = new Quat();
+  /** 与轴垂直、固定在 A 上的两个方向（锁定摆动用） */
+  private readonly localPerpA1 = new Vec3();
+  private readonly localPerpA2 = new Vec3();
 
   enableLimit: boolean;
   lowerAngle: number;
@@ -99,22 +116,11 @@ export class HingeJoint extends Joint {
       const axis = new Vec3().copy(options.axis);
       axis.normalize();
       this.bodyA.getLocalVector(axis, this.localAxisA);
-      this.bodyB.getLocalVector(axis, this.localAxisB);
     }
     if (options.localAxisA) this.localAxisA.copy(options.localAxisA);
-    if (options.localAxisB) this.localAxisB.copy(options.localAxisB);
     this.localAxisA.normalize();
-    this.localAxisB.normalize();
-
-    // 参考方向：以 A 的轴构造垂线，转换到 B 中，使初始角度为 0
-    this.localAxisA.perpendicular(this.localRefA);
-    this.bodyA.getWorldVector(this.localRefA, tv);
-    this.bodyB.getLocalVector(tv, this.localRefB);
-    // 去掉与 B 轴平行的分量
-    this.localRefB.addScaled(this.localAxisB, -this.localRefB.dot(this.localAxisB));
-    this.localRefB.normalize();
-    this.localPerpB1.copy(this.localRefB);
-    this.localPerpB2.crossVectors(this.localAxisB, this.localPerpB1);
+    computeBasis(this.localAxisA, this.localPerpA1, this.localPerpA2);
+    this.relativeRotation.multiplyConjugateA(this.bodyA.rotation, this.bodyB.rotation);
 
     this.enableLimit = options.enableLimit ?? false;
     this.lowerAngle = options.lowerAngle ?? 0;
@@ -128,12 +134,12 @@ export class HingeJoint extends Joint {
     this.targetAngle = options.targetAngle ?? 0;
   }
 
-  /** 当前铰链角（B 相对 A 绕轴转过的角度，弧度） */
+  /** 当前铰链角（B 相对 A 绕轴转过的角度，创建时为 0，范围 [-π, π]） */
   getAngle(): number {
     this.bodyA.getWorldVector(this.localAxisA, a);
-    this.bodyA.getWorldVector(this.localRefA, refA);
-    this.bodyB.getWorldVector(this.localRefB, refB);
-    return Math.atan2(tv.crossVectors(refA, refB).dot(a), refA.dot(refB));
+    qE.multiplyQuats(this.bodyA.rotation, this.relativeRotation).conjugate();
+    qE.premultiply(this.bodyB.rotation);
+    return swingTwist(qE, a, swingVec);
   }
 
   /** 当前相对角速度（rad/s） */
@@ -153,20 +159,28 @@ export class HingeJoint extends Joint {
     if (!this.enableSpring) this.springImpulse = 0;
   }
 
+  /**
+   * 计算当前铰链轴 a、锁定摆动的两个方向 j1/j2 与摆动误差 swingVec，返回铰链角。
+   * 误差旋转 qE = qB (qA qRel)⁻¹ 分解为绕轴的扭转（铰链角）与摆动（需锁定为 0）。
+   */
   private computeFrames(): number {
-    const bodyA = this.bodyA;
-    const bodyB = this.bodyB;
-    currentRotation(bodyA, qA);
-    currentRotation(bodyB, qB);
+    currentRotation(this.bodyA, qA);
+    currentRotation(this.bodyB, qB);
     qA.rotate(this.localAxisA, a);
-    qB.rotate(this.localPerpB1, p);
-    qB.rotate(this.localPerpB2, q);
-    // 约束 C1 = a·p, C2 = a·q；雅可比 J1 = p × a, J2 = q × a
-    j1.crossVectors(p, a);
-    j2.crossVectors(q, a);
-    qA.rotate(this.localRefA, refA);
-    qB.rotate(this.localRefB, refB);
-    return Math.atan2(tv.crossVectors(refA, refB).dot(a), refA.dot(refB));
+    qA.rotate(this.localPerpA1, j1);
+    qA.rotate(this.localPerpA2, j2);
+    qE.multiplyQuats(qA, this.relativeRotation).conjugate();
+    qE.premultiply(qB);
+    return swingTwist(qE, a, swingVec);
+  }
+
+  /** 超出限制时，按圆周上的最近距离选择对应的限制（避免 ±π 处跳变） */
+  private unwrapForLimits(angle: number): number {
+    const lower = this.lowerAngle;
+    const upper = this.upperAngle;
+    if (angle < lower && lower - angle > angle + TWO_PI - upper) return angle + TWO_PI;
+    if (angle > upper && angle - upper > lower + TWO_PI - angle) return angle - TWO_PI;
+    return angle;
   }
 
   warmStart(): void {
@@ -184,7 +198,8 @@ export class HingeJoint extends Joint {
   solve(ctx: SolverContext, useBias: boolean): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
-    const angle = this.computeFrames();
+    const rawAngle = this.computeFrames();
+    const angle = this.enableLimit ? this.unwrapForLimits(rawAngle) : rawAngle;
     const IA = bodyA.invInertiaWorld;
     const IB = bodyB.invInertiaWorld;
     const axialK = IA.quadraticForm(a) + IB.quadraticForm(a);
@@ -194,7 +209,9 @@ export class HingeJoint extends Joint {
     // ---- 弹簧 ----
     if (this.enableSpring && this.springHertz > 0) {
       spring.set(this.springHertz, this.springDampingRatio, ctx.h);
-      const C = angle - this.targetAngle;
+      let C = rawAngle - this.targetAngle;
+      if (C > Math.PI) C -= TWO_PI;
+      else if (C < -Math.PI) C += TWO_PI;
       const impulse =
         -spring.massScale * axialMass * (wRel() + spring.biasRate * C) -
         spring.impulseScale * this.springImpulse;
@@ -256,7 +273,7 @@ export class HingeJoint extends Joint {
       }
     }
 
-    // ---- 锁定另外两个转动自由度（2x2 块求解） ----
+    // ---- 锁定摆动（绕 j1、j2 的转动，2x2 块求解） ----
     {
       const k11 = IA.quadraticForm(j1) + IB.quadraticForm(j1);
       const k22 = IA.quadraticForm(j2) + IB.quadraticForm(j2);
@@ -268,8 +285,8 @@ export class HingeJoint extends Joint {
       let impulseScale = 0;
       if (useBias) {
         const soft = ctx.jointSoftness;
-        b1 += soft.biasRate * a.dot(p);
-        b2 += soft.biasRate * a.dot(q);
+        b1 += soft.biasRate * swingVec.dot(j1);
+        b2 += soft.biasRate * swingVec.dot(j2);
         massScale = soft.massScale;
         impulseScale = soft.impulseScale;
       }

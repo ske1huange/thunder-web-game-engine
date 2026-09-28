@@ -569,7 +569,8 @@ export class World {
         if (!ContactManager.shouldCollide(collider, other)) return true;
         if (other.body.isDynamic() && (!body.isBullet || other.body.isBullet)) return true;
         if (shapeCast(collider.shape, castXf, dp, other.shape, other.worldTransform, minT, slop, castOut)) {
-          if (castOut.t < minT) minT = castOut.t;
+          // t = 0 表示起点已接触：交给推测接触处理，否则物体会被“钉”在起点（参考 Box2D v3）
+          if (castOut.t > 0 && castOut.t < minT) minT = castOut.t;
         }
         return true;
       };

@@ -149,6 +149,23 @@ GJK 作用于“核心点集 + 半径”，使用 Johnson 子算法求单纯形�
 
 碰撞并滑动（collide and slide）：沿剩余位移投射形状，停在命中点前 `skinWidth` 处，并沿表面法线保持 `skinWidth` 的间隙；剩余位移去掉指向表面的分量后继续（水平移动时陡坡法线去掉竖直分量，按竖直墙处理；缓坡上保持水平速度大小）；同时贴着两个不同的面时沿交线移动。形状投射在起点已接触时，若平移方向不朝向对方则视为不命中（凸体间距离关于平移参数是凸函数），这样贴着地面或墙滑动不会被当作碰撞。
 
+## Web Worker
+
+```mermaid
+sequenceDiagram
+  participant M as 主线程 WorkerWorld
+  participant W as Worker PhysicsWorkerHost
+  M->>W: createBody / addJoint / body 操作（按顺序）
+  M->>W: advance(dt, buffer)（转移缓冲区）
+  W->>W: world.advance(dt)
+  W-->>M: snapshot(buffer, alpha, 事件, 统计)（转移回来）
+  M->>M: 读取位姿到 BodyProxy，派发事件
+```
+
+- 主线程同步分配刚体编号与快照槽位，命令立即发送，因此创建后马上就能引用；刚体销毁后，其槽位要等到之后请求的快照返回才复用，避免读到旧数据。
+- 同一时刻只有一个推进请求在途（缓冲区在对方手里），期间 `advance` 只累积时间，下次一起发送，Worker 端再按 `maxStepsPerFrame` 截断，不会积压。
+- 查询与自定义命令带请求编号，结果以 Promise 返回；Worker 中抛出的错误会传回并 reject。
+
 ## 确定性与性能约定
 
 - 核心代码不使用随机数；刚体、碰撞体、接触都按创建顺序存放在数组中，迭代顺序确定。

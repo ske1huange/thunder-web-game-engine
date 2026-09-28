@@ -8,7 +8,7 @@
 | -------------------------------------- | -------------------------------------------------------------------------------- |
 | [`@thunder/physics`](packages/physics) | **Thunder Physics**：纯 TypeScript 编写、零运行时依赖的 3D 刚体物理引擎          |
 | [`@thunder/render`](packages/render)   | **Thunder Render**：基于 three.js 的渲染层——多光源与阴影、后期调色、物理世界同步 |
-| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（13 个 demo）                                      |
+| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（14 个 demo）                                      |
 
 ## Thunder Physics 特性
 
@@ -30,6 +30,7 @@
 - **休眠**：并查集岛屿，整岛静止后休眠，接触 / 关节 / 施力时自动唤醒
 - **查询**：射线（最近 / 全部）、AABB、形状重叠、形状投射，支持类别掩码、传感器、排除刚体与自定义过滤
 - **事件**：`collisionStart` / `collisionEnd`（含接近速度）、`sensorEnter` / `sensorExit`、`sleep` / `wake`，在 step 结束后派发
+- **Web Worker**：`WorkerWorld` 在 Worker 中运行整个世界，主线程通过可序列化的描述创建刚体 / 关节，位姿快照以可转移的 `Float64Array` 回传，事件与查询异步返回
 - **工程**：固定步长累加器 + 渲染插值、确定性（同一环境下同样输入逐位相同）、调试线框输出接口、ESM / CJS / IIFE 三种产物 + 类型声明
 
 ## Thunder Render：光源与调色
@@ -142,6 +143,7 @@ packages/physics/        物理引擎
   src/world/             World：模拟主循环、休眠、连续碰撞、事件
   src/character/         角色控制器
   src/vehicle/           射线车辆
+  src/worker/            Web Worker：可序列化描述、Worker 宿主、主线程 WorkerWorld
   src/query/             射线、AABB、重叠、形状投射查询
   src/debug/             调试绘制接口
   test/                  单元测试与物理行为测试（Vitest）
@@ -158,7 +160,7 @@ docs/                    架构说明与参考项目调研
 ## 路线图
 
 - 性能：结构体数组（SoA）数据布局、约束图着色 + Web Worker 并行、WebAssembly SIMD
-- 功能：6 自由度关节、Web Worker 运行、序列化与快照回放
+- 功能：6 自由度关节、世界快照与回放
 - 渲染：级联阴影（CSM）、泛光（Bloom）、屏幕空间环境光遮蔽（SSAO）、实时调节面板
 - 引擎其余部分：ECS、资源管理、音频等包
 

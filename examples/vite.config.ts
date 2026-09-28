@@ -14,6 +14,8 @@ export default defineConfig({
     // 引擎包与演示站共用同一份 three.js
     dedupe: ['three'],
   },
+  // 物理 Worker 以 ES 模块打包
+  worker: { format: 'es' },
   build: {
     target: 'es2022',
     // three.js 本身约 600KB，放宽告警阈值

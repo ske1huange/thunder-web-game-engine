@@ -10,6 +10,7 @@ import { sensor } from './sensor';
 import { shapes } from './shapes';
 import { terrain } from './terrain';
 import { vehicle } from './vehicle';
+import { worker } from './worker';
 import type { Demo } from './types';
 import { wall } from './wall';
 
@@ -27,5 +28,6 @@ export const demos: Demo[] = [
   terrain,
   character,
   vehicle,
+  worker,
 ];
 export type { Demo } from './types';

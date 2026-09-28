@@ -19,3 +19,4 @@ export * from './query';
 export * from './debug';
 export * from './character';
 export * from './vehicle';
+export * from './worker';

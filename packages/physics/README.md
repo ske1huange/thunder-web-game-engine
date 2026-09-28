@@ -276,6 +276,51 @@ car.getWheelTransform(0, position, rotation, alpha); // 渲染车轮（含悬挂
 
 更一般地，任何实现了 `preStep(dt)` / `postStep(dt)` 的对象都可以用 `world.addController(...)` 在每步前后执行（风场、浮力等）。
 
+## 在 Web Worker 中运行
+
+把整个物理世界放进 Worker，主线程只负责渲染与输入：
+
+```ts
+// physics.worker.ts
+import { runPhysicsWorker } from '@thunder/physics';
+runPhysicsWorker({
+  // 可选：在 Worker 内搭建场景、注册自定义命令（例如角色 / 车辆的输入）
+  setup(world, host) {
+    host.on('jump', (payload) => {
+      /* ... */
+    });
+  },
+});
+```
+
+```ts
+// 主线程
+import { WorkerWorld } from '@thunder/physics';
+
+const physics = new WorkerWorld(
+  new Worker(new URL('./physics.worker.ts', import.meta.url), { type: 'module' }),
+  { gravity: [0, -9.81, 0] }, // World 选项
+);
+// 刚体用可序列化的描述创建（向量写成数组），返回主线程上的代理
+const crate = physics.createBody({
+  position: [0, 5, 0],
+  colliders: [{ shape: { type: 'box', halfExtents: [0.5, 0.5, 0.5] }, friction: 0.6 }],
+});
+physics.addJoint({ type: 'hinge', bodyA: door, bodyB: frame, anchor: [0, 1, 0], axis: [0, 1, 0] });
+crate.applyImpulse(new Vec3(0, 5, 0)); // 命令按顺序发给 Worker
+physics.on('collisionStart', (e) => console.log(e.bodyA, e.bodyB, e.approachSpeed));
+const hit = await physics.raycast(origin, direction, 100); // 查询返回 Promise
+await physics.request('jump', { strength: 5 }); // 自定义命令
+
+// 每帧
+const alpha = physics.advance(frameDt); // 请求 Worker 推进；上一次未返回时累积时间
+crate.interpolate(alpha, position, rotation); // 最近一次快照 + 插值（比同步模拟晚一帧）
+```
+
+- 位姿快照是一块在两端之间来回转移的 `Float64Array`（每个刚体 15 个数：位置、朝向、上一步位姿、标志），不复制、不产生垃圾
+- 形状、刚体、关节的描述（`ShapeDesc` / `BodyDesc` / `JointDesc`）是纯数据，也可以存成 JSON 关卡文件，用 `createBodyFromDesc(world, desc)` 在同一线程中创建
+- `physics.step(dt)` 返回 Promise，可用于锁步模拟；同样输入下 Worker 中的结果与本地 `World` 逐位相同
+
 ## 查询
 
 ```ts

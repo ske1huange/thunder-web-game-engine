@@ -164,6 +164,8 @@ export class World {
   /** @internal */
   readonly contactManager: ContactManager;
   readonly events = new EventEmitter<WorldEvents>();
+  /** 已执行的 step 次数 */
+  stepCount = 0;
   readonly stats: WorldStats = {
     bodies: 0,
     awakeBodies: 0,
@@ -443,6 +445,7 @@ export class World {
   step(dt: number): void {
     if (!(dt > 0)) return;
     for (const c of this.controllers) c.preStep?.(dt);
+    this.stepCount++;
     const start = now();
     this.locked = true;
     try {

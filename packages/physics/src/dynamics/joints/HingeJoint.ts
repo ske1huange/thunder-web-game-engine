@@ -10,6 +10,7 @@ import {
   currentArm,
   currentDirection,
   currentRotation,
+  swingTwist,
 } from './JointUtils';
 
 export interface HingeJointOptions extends JointOptions {
@@ -50,29 +51,9 @@ const tv = new Vec3();
 const qA = new Quat();
 const qB = new Quat();
 const qE = new Quat();
-const twist = new Quat();
 const spring = new Softness();
 
 const TWO_PI = Math.PI * 2;
-
-/**
- * 由相对误差旋转 qE（世界系）与铰链轴 axis 分解出扭转角（绕轴，[-π, π]），
- * 并把摆动部分的旋转向量写入 swingOut。
- */
-function swingTwist(e: Quat, axis: Readonly<Vec3>, swingOut: Vec3): number {
-  const d = e.x * axis.x + e.y * axis.y + e.z * axis.z;
-  let angle = 2 * Math.atan2(d, e.w);
-  if (angle > Math.PI) angle -= TWO_PI;
-  else if (angle < -Math.PI) angle += TWO_PI;
-  twist.set(axis.x * d, axis.y * d, axis.z * d, e.w);
-  if (twist.lengthSq() < 1e-18) twist.identity();
-  else twist.normalize();
-  // swing = e * twist⁻¹
-  twist.conjugate();
-  twist.premultiply(e);
-  twist.toRotationVector(swingOut);
-  return angle;
-}
 
 /**
  * 铰链关节（旋转关节）：锚点重合，两刚体只能绕公共轴相对转动。

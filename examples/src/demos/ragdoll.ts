@@ -1,5 +1,5 @@
 import {
-  BallSocketJoint,
+  ConeTwistJoint,
   HingeJoint,
   Quat,
   type RigidBody,
@@ -11,12 +11,26 @@ import { addBox, addCapsule, addSphere, v } from './helpers';
 
 const ARM = new Quat().setFromAxisAngle(new Vec3(0, 0, 1), Math.PI / 2);
 
-/** 由胶囊、球与长方体组成的简易布娃娃：肩/髋/颈为球窝关节，肘/膝为带限制的铰链 */
-function createRagdoll(world: World, o: Vec3): RigidBody[] {
+/**
+ * 由胶囊、球与长方体组成的布娃娃：
+ * 颈、肩、髋为锥形扭转关节（摆动锥 + 扭转范围 + 关节摩擦），肘、膝为带角度限制的铰链。
+ */
+export function createRagdoll(world: World, o: Vec3): RigidBody[] {
   const at = (x: number, y: number, z: number) => v(o.x + x, o.y + y, o.z + z);
   const torso = addBox(world, at(0, 0, 0), v(0.2, 0.3, 0.12));
   const head = addSphere(world, at(0, 0.48, 0), 0.13);
-  world.addJoint(new BallSocketJoint({ bodyA: torso, bodyB: head, anchor: at(0, 0.33, 0) }));
+  world.addJoint(
+    new ConeTwistJoint({
+      bodyA: torso,
+      bodyB: head,
+      anchor: at(0, 0.33, 0),
+      twistAxis: v(0, 1, 0),
+      swingSpan: 0.6,
+      twistLower: -0.8,
+      twistUpper: 0.8,
+      maxFrictionTorque: 0.4,
+    }),
+  );
   const parts = [torso, head];
   for (const side of [-1, 1]) {
     const upperArm = addCapsule(world, at(side * 0.43, 0.22, 0), 0.06, 0.15, {
@@ -26,7 +40,16 @@ function createRagdoll(world: World, o: Vec3): RigidBody[] {
       body: { rotation: ARM },
     });
     world.addJoint(
-      new BallSocketJoint({ bodyA: torso, bodyB: upperArm, anchor: at(side * 0.21, 0.22, 0) }),
+      new ConeTwistJoint({
+        bodyA: torso,
+        bodyB: upperArm,
+        anchor: at(side * 0.21, 0.22, 0),
+        twistAxis: v(side, 0, 0),
+        swingSpan: 1.4,
+        twistLower: -1,
+        twistUpper: 1,
+        maxFrictionTorque: 0.5,
+      }),
     );
     world.addJoint(
       new HingeJoint({
@@ -42,7 +65,16 @@ function createRagdoll(world: World, o: Vec3): RigidBody[] {
     const upperLeg = addCapsule(world, at(side * 0.1, -0.57, 0), 0.075, 0.18);
     const lowerLeg = addCapsule(world, at(side * 0.1, -1.09, 0), 0.065, 0.18);
     world.addJoint(
-      new BallSocketJoint({ bodyA: torso, bodyB: upperLeg, anchor: at(side * 0.1, -0.31, 0) }),
+      new ConeTwistJoint({
+        bodyA: torso,
+        bodyB: upperLeg,
+        anchor: at(side * 0.1, -0.31, 0),
+        twistAxis: v(0, -1, 0),
+        swingSpan: 1.1,
+        twistLower: -0.5,
+        twistUpper: 0.5,
+        maxFrictionTorque: 1,
+      }),
     );
     world.addJoint(
       new HingeJoint({
@@ -63,7 +95,8 @@ function createRagdoll(world: World, o: Vec3): RigidBody[] {
 export const ragdoll: Demo = {
   id: 'ragdoll',
   name: '布娃娃',
-  description: '胶囊 + 球窝/铰链关节组成的布娃娃从楼梯上滚落。',
+  description:
+    '胶囊 + 锥形扭转 / 铰链关节组成的布娃娃从楼梯上滚落：颈、肩、髋有摆动锥与扭转范围并带关节摩擦，肘、膝是带角度限制的铰链。',
   camera: { position: [8, 6, 6], target: [0, 1.5, -2.5] },
   setup({ world, setInfo }) {
     // 楼梯
@@ -77,6 +110,6 @@ export const ragdoll: Demo = {
         part.setLinearVelocity(v(0, 0, 3));
       }
     }
-    setInfo('拖拽布娃娃的任意部位。肘部与膝部是带角度限制的铰链。');
+    setInfo('拖拽布娃娃的任意部位，关节不会扭到不自然的角度。');
   },
 };

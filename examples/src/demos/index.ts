@@ -9,6 +9,7 @@ import { raycast } from './raycast';
 import { sensor } from './sensor';
 import { shapes } from './shapes';
 import { terrain } from './terrain';
+import { vehicle } from './vehicle';
 import type { Demo } from './types';
 import { wall } from './wall';
 
@@ -25,5 +26,6 @@ export const demos: Demo[] = [
   lights,
   terrain,
   character,
+  vehicle,
 ];
 export type { Demo } from './types';

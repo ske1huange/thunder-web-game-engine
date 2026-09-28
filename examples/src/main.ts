@@ -315,7 +315,7 @@ function frame(): void {
   }
 
   overlayRenderer.begin();
-  hooks.render?.();
+  hooks.render?.(alpha);
   overlayRenderer.end();
 
   debugRenderer.begin();

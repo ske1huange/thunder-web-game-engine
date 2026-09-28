@@ -12,8 +12,10 @@ export {
   type CollisionEvent,
   type SensorEvent,
   type BodyEvent,
+  type WorldController,
 } from './world/World';
 export { EventEmitter } from './events/EventEmitter';
 export * from './query';
 export * from './debug';
 export * from './character';
+export * from './vehicle';

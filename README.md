@@ -8,7 +8,7 @@
 | -------------------------------------- | -------------------------------------------------------------------------------- |
 | [`@thunder/physics`](packages/physics) | **Thunder Physics**：纯 TypeScript 编写、零运行时依赖的 3D 刚体物理引擎          |
 | [`@thunder/render`](packages/render)   | **Thunder Render**：基于 three.js 的渲染层——多光源与阴影、后期调色、物理世界同步 |
-| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（12 个 demo）                                      |
+| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（13 个 demo）                                      |
 
 ## Thunder Physics 特性
 
@@ -25,7 +25,8 @@
   - 连续碰撞：高速物体对静态物体做形状投射（`isBullet` 还会检测动态物体）
   - 接触缓存：相对位姿几乎不变的接触沿用上一次的流形，静止堆叠几乎不需要窄相
 - **求解器**：Box2D v3 的 **Soft Step**：子步进 + 软约束 + relax + 分离的弹性阶段，warm start，二维库仑摩擦锥
-- **关节**：球窝、铰链（角度限制 / 马达 / 弹簧）、距离（刚性杆 / 弹簧 / 绳索）、焊接、滑动（平移限制 / 直线马达）、鼠标拖拽
+- **关节**：球窝、锥形扭转（布娃娃：摆动锥 + 扭转范围 + 关节摩擦）、铰链（角度限制 / 马达 / 弹簧）、距离（刚性杆 / 弹簧 / 绳索）、焊接、滑动（平移限制 / 直线马达）、鼠标拖拽
+- **射线车辆**：悬挂弹簧阻尼、轮胎侧向摩擦与打滑、转向 / 驱动 / 制动、防侧翻；`world.addController` 挂接每步前后的自定义逻辑
 - **休眠**：并查集岛屿，整岛静止后休眠，接触 / 关节 / 施力时自动唤醒
 - **查询**：射线（最近 / 全部）、AABB、形状重叠、形状投射，支持类别掩码、传感器、排除刚体与自定义过滤
 - **事件**：`collisionStart` / `collisionEnd`（含接近速度）、`sensorEnter` / `sensorExit`、`sleep` / `wake`，在 step 结束后派发
@@ -140,6 +141,7 @@ packages/physics/        物理引擎
   src/dynamics/          刚体、碰撞体、接触管理、求解器、关节
   src/world/             World：模拟主循环、休眠、连续碰撞、事件
   src/character/         角色控制器
+  src/vehicle/           射线车辆
   src/query/             射线、AABB、重叠、形状投射查询
   src/debug/             调试绘制接口
   test/                  单元测试与物理行为测试（Vitest）
@@ -156,7 +158,7 @@ docs/                    架构说明与参考项目调研
 ## 路线图
 
 - 性能：结构体数组（SoA）数据布局、约束图着色 + Web Worker 并行、WebAssembly SIMD
-- 功能：射线车辆、锥形 / 6 自由度关节、Web Worker 运行、序列化与快照回放
+- 功能：6 自由度关节、Web Worker 运行、序列化与快照回放
 - 渲染：级联阴影（CSM）、泛光（Bloom）、屏幕空间环境光遮蔽（SSAO）、实时调节面板
 - 引擎其余部分：ECS、资源管理、音频等包
 

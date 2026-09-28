@@ -23,8 +23,8 @@ export type DemoUpdate = (dt: number, time: number) => void;
 export interface DemoHooks {
   /** 每个固定步之前调用（可修改世界） */
   update?: DemoUpdate;
-  /** 每帧渲染前调用（可向 overlay 画线） */
-  render?: () => void;
+  /** 每帧渲染前调用（可向 overlay 画线、更新自定义网格），alpha 为渲染插值系数 */
+  render?: (alpha: number) => void;
   /** 相机跟随目标（每帧调用，alpha 为渲染插值系数） */
   follow?: (alpha: number) => Readonly<Vec3> | null;
   /** 切换 / 重置 demo 时调用（移除事件监听等） */

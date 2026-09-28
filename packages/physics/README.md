@@ -142,6 +142,7 @@ player.interpolate(alpha, out); // 渲染插值
 ```ts
 import {
   BallSocketJoint,
+  ConeTwistJoint,
   DistanceJoint,
   FixedJoint,
   HingeJoint,
@@ -150,6 +151,20 @@ import {
 } from '@thunder/physics';
 
 world.addJoint(new BallSocketJoint({ bodyA, bodyB, anchor: new Vec3(0, 5, 0) }));
+
+// 布娃娃的肩 / 髋 / 颈：扭转轴的摆动限制在圆锥内，绕轴扭转有范围，可加关节摩擦
+world.addJoint(
+  new ConeTwistJoint({
+    bodyA: torso,
+    bodyB: upperArm,
+    anchor: shoulder,
+    twistAxis: new Vec3(1, 0, 0), // 世界坐标，例如沿上臂方向
+    swingSpan: 1.4, // 摆动锥半角
+    twistLower: -1,
+    twistUpper: 1,
+    maxFrictionTorque: 0.5,
+  }),
+);
 
 world.addJoint(
   new HingeJoint({
@@ -214,6 +229,52 @@ world.removeJoint(drag);
 ```
 
 所有关节默认 `collideConnected: false`（相连的两个刚体之间不碰撞）。
+
+## 射线车辆
+
+`RaycastVehicle`（参考 Bullet / cannon-es）：车身是普通动态刚体，每个车轮是一条向下的射线。
+
+```ts
+import { RaycastVehicle } from '@thunder/physics';
+
+const chassis = world.createBody({ position: new Vec3(0, 2, 0) });
+chassis.addCollider({ shape: new BoxShape(new Vec3(0.9, 0.3, 2)), density: 150 });
+const car = new RaycastVehicle(world, { chassis }); // 车头默认朝 -Z，自动注册为世界控制器
+for (const [x, z] of [
+  [-0.9, -1.3],
+  [0.9, -1.3],
+  [-0.9, 1.3],
+  [0.9, 1.3],
+]) {
+  car.addWheel({
+    position: new Vec3(x, -0.15, z), // 悬挂连接点（车身局部坐标）
+    radius: 0.4,
+    suspensionRestLength: 0.35,
+    suspensionStiffness: 40, // 每单位车身质量
+    dampingCompression: 4.5,
+    dampingRelaxation: 3,
+    frictionSlip: 2.5, // 抓地系数
+    rollInfluence: 0.02, // 侧向力作用点高度（越小越不易侧翻）
+  });
+}
+
+// 每步之前设置输入
+car.setSteering(0.4, 0); // 前轮转向（弧度，正值向左）
+car.setSteering(0.4, 1);
+car.applyEngineForce(3000, 2); // 后轮驱动（N）
+car.applyEngineForce(3000, 3);
+car.setBrake(0, 2); // 制动力（N）
+
+car.forwardSpeed; // 车速（m/s）
+car.wheels[0].isInContact; // 接地、悬挂长度、打滑（skidInfo < 1）等状态
+car.getWheelTransform(0, position, rotation, alpha); // 渲染车轮（含悬挂、转向、滚动与插值）
+```
+
+- 悬挂：弹簧 + 压缩 / 回弹阻尼，以力的形式随子步积分（停车后可以正常休眠）
+- 轮胎：侧向摩擦抵消横滑，纵向为驱动或制动，合力超过 `悬挂力 × frictionSlip` 时按比例打滑
+- 地面是动态刚体时（例如跷跷板、平板车），反作用力施加在地面刚体上
+
+更一般地，任何实现了 `preStep(dt)` / `postStep(dt)` 的对象都可以用 `world.addController(...)` 在每步前后执行（风场、浮力等）。
 
 ## 查询
 

@@ -5,3 +5,4 @@ export { DistanceJoint, type DistanceJointOptions } from './DistanceJoint';
 export { FixedJoint, type FixedJointOptions } from './FixedJoint';
 export { SliderJoint, type SliderJointOptions } from './SliderJoint';
 export { MouseJoint, type MouseJointOptions } from './MouseJoint';
+export { ConeTwistJoint, type ConeTwistJointOptions } from './ConeTwistJoint';

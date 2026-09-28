@@ -102,6 +102,15 @@ export interface WorldEvents {
   wake: BodyEvent;
 }
 
+/**
+ * 世界控制器：在每步开始前 / 结束后被调用（例如射线车辆、浮力、风场）。
+ * preStep 在世界未锁定时调用，可以施加力 / 冲量、修改刚体。
+ */
+export interface WorldController {
+  preStep?(dt: number): void;
+  postStep?(dt: number): void;
+}
+
 export interface WorldStats {
   bodies: number;
   awakeBodies: number;
@@ -149,6 +158,7 @@ export class World {
 
   readonly bodies: RigidBody[] = [];
   readonly joints: Joint[] = [];
+  readonly controllers: WorldController[] = [];
   /** @internal */
   readonly broadPhase: BroadPhase<Collider>;
   /** @internal */
@@ -419,9 +429,20 @@ export class World {
     return this.accumulator / dt;
   }
 
+  /** 添加控制器（每步前后调用） */
+  addController<T extends WorldController>(controller: T): T {
+    if (!this.controllers.includes(controller)) this.controllers.push(controller);
+    return controller;
+  }
+
+  removeController(controller: WorldController): void {
+    removeItem(this.controllers, controller);
+  }
+
   /** 推进 dt 秒（建议使用固定步长） */
   step(dt: number): void {
     if (!(dt > 0)) return;
+    for (const c of this.controllers) c.preStep?.(dt);
     const start = now();
     this.locked = true;
     try {
@@ -437,6 +458,7 @@ export class World {
     this.stats.stepTime = now() - start;
     this.updateStats();
     this.flushEvents();
+    for (const c of this.controllers) c.postStep?.(dt);
   }
 
   private solve(dt: number): void {

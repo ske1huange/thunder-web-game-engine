@@ -175,3 +175,25 @@ export function rotationError(
   tq.premultiply(qB);
   return tq.toRotationVector(out);
 }
+
+const TWO_PI = Math.PI * 2;
+const twist = new Quat();
+
+/**
+ * 摆动-扭转分解：把误差旋转 e（世界系）分解为 e = swing · twist，twist 绕 axis。
+ * 返回扭转角（[-π, π]），摆动部分的旋转向量（与 axis 垂直）写入 swingOut。
+ */
+export function swingTwist(e: Readonly<Quat>, axis: Readonly<Vec3>, swingOut: Vec3): number {
+  const d = e.x * axis.x + e.y * axis.y + e.z * axis.z;
+  let angle = 2 * Math.atan2(d, e.w);
+  if (angle > Math.PI) angle -= TWO_PI;
+  else if (angle < -Math.PI) angle += TWO_PI;
+  twist.set(axis.x * d, axis.y * d, axis.z * d, e.w);
+  if (twist.lengthSq() < 1e-18) twist.identity();
+  else twist.normalize();
+  // swing = e * twist⁻¹
+  twist.conjugate();
+  twist.premultiply(e);
+  twist.toRotationVector(swingOut);
+  return angle;
+}

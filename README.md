@@ -4,10 +4,11 @@
 
 当前包含：
 
-| 包                                     | 说明                                                                    |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| [`@thunder/physics`](packages/physics) | **Thunder Physics**：纯 TypeScript 编写、零运行时依赖的 3D 刚体物理引擎 |
-| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（9 个 demo）                              |
+| 包                                     | 说明                                                                             |
+| -------------------------------------- | -------------------------------------------------------------------------------- |
+| [`@thunder/physics`](packages/physics) | **Thunder Physics**：纯 TypeScript 编写、零运行时依赖的 3D 刚体物理引擎          |
+| [`@thunder/render`](packages/render)   | **Thunder Render**：基于 three.js 的渲染层——多光源与阴影、后期调色、物理世界同步 |
+| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（10 个 demo）                                      |
 
 ## Thunder Physics 特性
 
@@ -27,17 +28,54 @@
 - **事件**：`collisionStart` / `collisionEnd`（含接近速度）、`sensorEnter` / `sensorExit`、`sleep` / `wake`，在 step 结束后派发
 - **工程**：固定步长累加器 + 渲染插值、确定性（同一环境下同样输入逐位相同）、调试线框输出接口、ESM / CJS / IIFE 三种产物 + 类型声明
 
+## Thunder Render：光源与调色
+
+物理引擎只负责模拟，画面由 `@thunder/render` 负责（依赖 three.js 与 `@thunder/physics`）：
+
+- **光源**：主光（太阳 / 月亮）+ 半球天光 + 环境光 + 环境贴图（IBL）；任意数量的点光源 / 聚光灯，可**绑定到刚体**上随之移动旋转
+- **阴影**：主光阴影以相机注视点为中心并做纹素对齐，大场景不截断、移动时不闪烁；阴影质量 off / low / medium / high，可调柔和度
+- **光照预设**：室内、白天、黄昏、夜晚、阴天（同时设置背景与雾）
+- **调色**：色调映射（ACES / AgX / Neutral 等）、曝光、白平衡（色温 / 色调）、对比度、饱和度、Lift / Gamma / Gain、暗角、3D LUT（内置程序化 LUT，也可加载 `.cube`）
+- **调色预设**：中性、电影感、暖色、冷色、复古、黑白、鲜艳
+- **物理同步**：`PhysicsView` 按碰撞形状生成网格、渲染插值、休眠变暗、单个刚体的外观（颜色 / 自发光 / 粗糙度 / 金属度 / 阴影）
+
+```ts
+import { PhysicsView, RenderPipeline } from '@thunder/render';
+
+const pipeline = new RenderPipeline(camera, {
+  container,
+  lighting: 'sunset',
+  grading: 'cinematic',
+});
+const view = new PhysicsView(world);
+pipeline.scene.add(view.root);
+
+// 发光球：自发光材质 + 绑定的点光源
+view.setAppearance(ball, { emissive: 0xff5a36, emissiveIntensity: 3, castShadow: false });
+pipeline.lights.attachToBody(
+  pipeline.lights.addPointLight({ color: 0xff5a36, intensity: 12 }),
+  ball,
+);
+
+// 每帧
+const alpha = world.advance(dt);
+view.sync(alpha);
+pipeline.render(controls.target, alpha);
+```
+
+详见 [packages/render/README.md](packages/render/README.md)。演示站左上角可以切换光照与调色预设，「光源与调色」demo 展示了绑定在刚体上的点光源与聚光灯。
+
 ## 快速开始
 
 ```bash
 pnpm install
 pnpm dev          # 启动演示站 http://localhost:5173
 pnpm test         # 单元测试 + 物理行为测试
-pnpm build        # 构建 packages/physics（dist/）
+pnpm build        # 构建 packages/physics 与 packages/render（dist/）
 pnpm bench        # 基准测试
 ```
 
-演示站操作：左键拖拽抓取物体，右键 / 滚轮调整视角，空格发射小球，`P` 暂停，`N` 单步，`R` 重置，`D` 调试线框。
+演示站操作：左键拖拽抓取物体，右键 / 滚轮调整视角，空格发射小球，`P` 暂停，`N` 单步，`R` 重置，`D` 调试线框；左上角可切换光照与调色预设。
 
 ## 使用示例
 
@@ -100,6 +138,11 @@ packages/physics/        物理引擎
   src/query/             射线、AABB、重叠、形状投射查询
   src/debug/             调试绘制接口
   test/                  单元测试与物理行为测试（Vitest）
+packages/render/         渲染层（three.js）
+  src/lighting/          LightRig：光源、阴影跟随、光照预设
+  src/postprocessing/    PostProcessor：色调映射、调色着色器、3D LUT、调色预设
+  src/physics/           PhysicsView（物理 → 网格同步）、调试线渲染
+  src/RenderPipeline.ts  渲染器 + 场景 + 光源 + 后期的一站式封装
 examples/                three.js 演示站
 bench/                   基准测试
 docs/                    架构说明与参考项目调研
@@ -109,7 +152,8 @@ docs/                    架构说明与参考项目调研
 
 - 性能：结构体数组（SoA）数据布局、约束图着色 + Web Worker 并行、WebAssembly SIMD
 - 功能：三角网格与高度场（静态地形）、角色控制器（character mover）、锥形 / 6 自由度关节、序列化与快照回放
-- 引擎其余部分：渲染、ECS、资源管理等包
+- 渲染：级联阴影（CSM）、泛光（Bloom）、屏幕空间环境光遮蔽（SSAO）、实时调节面板
+- 引擎其余部分：ECS、资源管理、音频等包
 
 ## License
 

@@ -126,3 +126,18 @@ GJK 作用于“核心点集 + 半径”，使用 Johnson 子算法求单纯形�
 - 核心代码不使用随机数；刚体、碰撞体、接触都按创建顺序存放在数组中，迭代顺序确定。
 - 数学对象可变、带 `out` 参数；热路径不分配对象，模块内复用临时变量。
 - 物理量单位为米、千克、秒。
+
+## 渲染层（`@thunder/render`）
+
+物理引擎不依赖任何渲染库；`@thunder/render` 基于 three.js 实现画面，与物理世界的接口只有两处：`PhysicsView` 读取刚体与碰撞体生成网格、`LightRig.attachToBody` 读取刚体位姿驱动光源，二者都使用 `body.interpolate(alpha)` 与固定步长的物理保持平滑。
+
+```mermaid
+flowchart LR
+  A[RenderPass<br/>线性 HDR · MSAA] --> B[OutputPass<br/>曝光 · 色调映射 · sRGB]
+  B --> C[调色<br/>白平衡 · LGG · 对比度 · 饱和度 · 暗角]
+  C --> D[LUTPass<br/>3D LUT]
+```
+
+- 曝光与色调映射作用于线性 HDR 画面；其余调色在色调映射之后的显示空间进行，参数与常见调色软件一致。
+- 参数为中性时跳过调色通道，LUT 强度为 0 时跳过 LUT 通道。
+- 主光阴影相机以相机注视点为中心，并在光源视平面内按纹素对齐（坐标轴与 three.js 阴影相机 `lookAt` 一致），避免移动时阴影闪烁。

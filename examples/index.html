@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thunder Physics 演示</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <aside id="sidebar">
+      <header>
+        <h1>⚡ Thunder Physics</h1>
+        <p>面向 HTML5 游戏的 TypeScript 3D 物理引擎</p>
+      </header>
+      <nav id="demo-list"></nav>
+      <section class="help">
+        <h2>操作</h2>
+        <ul>
+          <li><kbd>左键拖拽</kbd> 抓取物体</li>
+          <li><kbd>右键 / 滚轮</kbd> 旋转、缩放视角</li>
+          <li><kbd>空格</kbd> 发射小球</li>
+          <li><kbd>P</kbd> 暂停　<kbd>N</kbd> 单步</li>
+          <li><kbd>R</kbd> 重置　<kbd>D</kbd> 调试线框</li>
+        </ul>
+      </section>
+    </aside>
+    <main id="stage">
+      <div id="hud">
+        <div id="demo-title"></div>
+        <div id="demo-desc"></div>
+        <table id="stats"></table>
+      </div>
+      <div id="toolbar">
+        <button id="btn-pause" type="button">暂停</button>
+        <button id="btn-step" type="button">单步</button>
+        <button id="btn-reset" type="button">重置</button>
+        <button id="btn-debug" type="button">调试线框</button>
+      </div>
+      <div id="info"></div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

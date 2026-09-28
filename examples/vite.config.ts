@@ -13,5 +13,7 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    // three.js 本身约 600KB，放宽告警阈值
+    chunkSizeWarningLimit: 1000,
   },
 });

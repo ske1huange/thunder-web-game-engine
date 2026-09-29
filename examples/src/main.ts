@@ -61,6 +61,7 @@ let showDebug = false;
 let stepTimeAvg = 0;
 
 const infoEl = document.getElementById('info')!;
+const panelEl = document.getElementById('panel')!;
 
 function loadDemo(demo: Demo): void {
   hooks.dispose?.();
@@ -80,6 +81,7 @@ function loadDemo(demo: Demo): void {
   if (demo.ground !== false) ground.addCollider({ shape: new PlaneShape(), friction: 0.6 });
   grid.visible = demo.ground !== false;
   infoEl.textContent = '';
+  panelEl.replaceChildren();
   simTime = 0;
   accumulator = 0;
   dragJoint = null;
@@ -93,6 +95,7 @@ function loadDemo(demo: Demo): void {
       infoEl.textContent = text;
     },
     camera,
+    panel: panelEl,
   });
   hooks = typeof result === 'function' ? { update: result } : (result ?? {});
   const cam = demo.camera ?? { position: [12, 8, 14], target: [0, 2, 0] };

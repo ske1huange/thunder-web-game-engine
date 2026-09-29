@@ -137,9 +137,20 @@ export function createConvexHullFromObject(
   options: CollectOptions & { maxPoints?: number } = {},
 ): ConvexHullShape {
   const { positions } = collectTriangles(object, options);
-  const count = positions.length / 3;
-  if (count < 4) throw new Error('createConvexHullFromObject: 顶点不足');
-  const maxPoints = Math.max(4, options.maxPoints ?? 64);
+  return convexHullFromPositions(positions, options.maxPoints);
+}
+
+/**
+ * 由顶点坐标 [x, y, z, ...] 生成凸包碰撞形状；顶点数超过 maxPoints（默认 64）时，
+ * 取球面上均匀分布的 maxPoints 个方向上的最远顶点。
+ */
+export function convexHullFromPositions(
+  positions: ArrayLike<number>,
+  maxPointsOption = 64,
+): ConvexHullShape {
+  const count = Math.floor(positions.length / 3);
+  if (count < 4) throw new Error('convexHullFromPositions: 顶点不足');
+  const maxPoints = Math.max(4, maxPointsOption);
   const chosen = new Set<number>();
   if (count <= maxPoints) {
     for (let i = 0; i < count; i++) chosen.add(i);

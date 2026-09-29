@@ -18,7 +18,12 @@ const cases = [
   {
     name: '@thunder/render（不含 three）',
     code: "export * from './packages/render/dist/index.js';",
-    budget: 12 * 1024,
+    budget: 16 * 1024,
+  },
+  {
+    name: '@thunder/render（最小用法：RenderPipeline + PhysicsView）',
+    code: "export { RenderPipeline, PhysicsView } from './packages/render/dist/index.js';",
+    budget: 9 * 1024,
   },
 ];
 

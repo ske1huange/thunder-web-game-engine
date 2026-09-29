@@ -8,7 +8,7 @@
 | -------------------------------------- | -------------------------------------------------------------------------------- |
 | [`@thunder/physics`](packages/physics) | **Thunder Physics**：纯 TypeScript 编写、零运行时依赖的 3D 刚体物理引擎          |
 | [`@thunder/render`](packages/render)   | **Thunder Render**：基于 three.js 的渲染层——多光源与阴影、后期调色、物理世界同步 |
-| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（14 个 demo）                                      |
+| [`@thunder/examples`](examples)        | 基于 Vite + three.js 的演示站（15 个 demo）                                      |
 
 ## Thunder Physics 特性
 
@@ -27,6 +27,7 @@
 - **求解器**：Box2D v3 的 **Soft Step**：子步进 + 软约束 + relax + 分离的弹性阶段，warm start，二维库仑摩擦锥
 - **关节**：球窝、锥形扭转（布娃娃：摆动锥 + 扭转范围 + 关节摩擦）、铰链（角度限制 / 马达 / 弹簧）、距离（刚性杆 / 弹簧 / 绳索）、焊接、滑动（平移限制 / 直线马达）、鼠标拖拽
 - **射线车辆**：悬挂弹簧阻尼、轮胎侧向摩擦与打滑、转向 / 驱动 / 制动、防侧翻；`world.addController` 挂接每步前后的自定义逻辑
+- **车身可动部件**：车门 / 引擎盖 / 后备箱（铰链锁止、马达开合、自由摆动或保持打开）、天窗 / 尾翼（滑动）、雨刮（往复），都是真实刚体，会被挡住、会被甩上
 - **休眠**：并查集岛屿，整岛静止后休眠，接触 / 关节 / 施力时自动唤醒
 - **查询**：射线（最近 / 全部）、AABB、形状重叠、形状投射，支持类别掩码、传感器、排除刚体与自定义过滤
 - **事件**：`collisionStart` / `collisionEnd`（含接近速度）、`sensorEnter` / `sensorExit`、`sleep` / `wake`，在 step 结束后派发
@@ -43,6 +44,7 @@
 - **调色**：色调映射（ACES / AgX / Neutral 等）、曝光、白平衡（色温 / 色调）、对比度、饱和度、Lift / Gamma / Gain、暗角、3D LUT（内置程序化 LUT，也可加载 `.cube`）
 - **调色预设**：中性、电影感、暖色、冷色、复古、黑白、鲜艳
 - **物理同步**：`PhysicsView` 按碰撞形状生成网格、渲染插值、休眠变暗、单个刚体的外观（颜色 / 自发光 / 粗糙度 / 金属度 / 阴影）
+- **物理驱动的车模**：`createPhysicsCar` 按 glTF 节点名绑定车身、车轮、刹车卡钳、方向盘、车门、引擎盖、后备箱、天窗、尾翼、雨刮与车灯，所有动作都由物理驱动（悬挂姿态、转向、开合、被甩上的车门）
 
 ```ts
 import { PhysicsView, RenderPipeline } from '@thunder/render';
@@ -68,7 +70,7 @@ view.sync(alpha);
 pipeline.render(controls.target, alpha);
 ```
 
-详见 [packages/render/README.md](packages/render/README.md)。演示站左上角可以切换光照与调色预设，「光源与调色」demo 展示了绑定在刚体上的点光源与聚光灯。
+详见 [packages/render/README.md](packages/render/README.md)。演示站左上角可以切换光照与调色预设，「光源与调色」demo 展示了绑定在刚体上的点光源与聚光灯，「车模部件」demo 是一辆可以开、各部件都能动的跑车（右下角面板或数字键 1–8 控制部件）。
 
 ## 安装
 
@@ -167,7 +169,7 @@ packages/physics/        物理引擎
   src/dynamics/          刚体、碰撞体、接触管理、求解器、关节
   src/world/             World：模拟主循环、休眠、连续碰撞、事件
   src/character/         角色控制器
-  src/vehicle/           射线车辆
+  src/vehicle/           射线车辆、车身可动部件
   src/worker/            Web Worker：可序列化描述、Worker 宿主、主线程 WorkerWorld
   src/query/             射线、AABB、重叠、形状投射查询
   src/debug/             调试绘制接口
@@ -176,6 +178,7 @@ packages/render/         渲染层（three.js）
   src/lighting/          LightRig：光源、阴影跟随、光照预设
   src/postprocessing/    PostProcessor：色调映射、调色着色器、3D LUT、调色预设
   src/physics/           PhysicsView（物理 → 网格同步）、调试线渲染、three.js → 碰撞体
+  src/vehicle/           PhysicsCar：按节点名把车模绑定到物理
   src/RenderPipeline.ts  渲染器 + 场景 + 光源 + 后期的一站式封装
 examples/                three.js 演示站
 bench/                   基准测试

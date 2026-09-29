@@ -11,6 +11,7 @@ import { shapes } from './shapes';
 import { terrain } from './terrain';
 import { vehicle } from './vehicle';
 import { worker } from './worker';
+import { carParts } from './carParts';
 import type { Demo } from './types';
 import { wall } from './wall';
 
@@ -29,5 +30,6 @@ export const demos: Demo[] = [
   character,
   vehicle,
   worker,
+  carParts,
 ];
 export type { Demo } from './types';

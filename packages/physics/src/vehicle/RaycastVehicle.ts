@@ -414,8 +414,15 @@ export class RaycastVehicle implements WorldController {
 
   /**
    * 车轮在渲染插值系数 alpha 下的世界位姿（车轮中心与朝向，车轮局部 X 轴为车轴）。
+   * spin 为 false 时不含滚动（刹车卡钳、挡泥板等随转向与悬挂运动但不转的部件）。
    */
-  getWheelTransform(index: number, outPosition: Vec3, outRotation: Quat, alpha = 1): void {
+  getWheelTransform(
+    index: number,
+    outPosition: Vec3,
+    outRotation: Quat,
+    alpha = 1,
+    spin = true,
+  ): void {
     const w = this.wheels[index]!;
     this.chassis.interpolate(alpha, chassisPos, chassisRot);
     const len = w.prevSuspensionLength + (w.suspensionLength - w.prevSuspensionLength) * alpha;
@@ -423,7 +430,7 @@ export class RaycastVehicle implements WorldController {
     tmpV.copy(this.localUp).negate();
     chassisRot.rotate(tmpV, tmpV);
     outPosition.addScaled(tmpV, len);
-    const rot = w.prevRotation + (w.rotation - w.prevRotation) * alpha;
+    const rot = spin ? w.prevRotation + (w.rotation - w.prevRotation) * alpha : 0;
     steerQ.setFromAxisAngle(this.localUp, w.steering);
     // 前进时车轮绕车轴（right）负方向滚动
     spinQ.setFromAxisAngle(this.localRight, -rot);

@@ -47,6 +47,22 @@ export {
   createTriMeshFromObject,
   createTriMeshFromGeometry,
   createConvexHullFromObject,
+  convexHullFromPositions,
   type CollectOptions,
   type CollectedTriangles,
 } from './physics/colliders';
+export {
+  PhysicsCar,
+  createPhysicsCar,
+  isHingedPart,
+  isSlidingPart,
+  isWiperPart,
+  type PhysicsCarOptions,
+  type CarInput,
+  type CarWheelBinding,
+  type CarHingeBinding,
+  type CarSliderBinding,
+  type CarWiperBinding,
+  type CarLightsBinding,
+  type CarDirection,
+} from './vehicle/PhysicsCar';

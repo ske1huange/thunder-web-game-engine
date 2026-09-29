@@ -11,4 +11,5 @@
 - `PostProcessor`：色调映射、曝光、白平衡、对比度、饱和度、Lift / Gamma / Gain、暗角、3D LUT，调色预设
 - `PhysicsView`：按碰撞形状生成网格（含三角网格与高度场）、渲染插值、刚体外观
 - `ThreeDebugRenderer`：物理调试线框
-- `createTriMeshFromObject` / `createConvexHullFromObject`：由 three.js 对象（例如 glTF 模型）生成碰撞体
+- `createTriMeshFromObject` / `createConvexHullFromObject` / `convexHullFromPositions`：由 three.js 对象（例如 glTF 模型）或顶点生成碰撞体
+- `PhysicsCar` / `createPhysicsCar`：按节点名把车模绑定为物理驱动的汽车（车身、车轮、刹车卡钳、方向盘、车门、引擎盖、后备箱、天窗、尾翼、雨刮、车灯）

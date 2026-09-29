@@ -144,3 +144,61 @@ level.addCollider({
 const rock = world.createBody({ position });
 rock.addCollider({ shape: createConvexHullFromObject(rockModel, { maxPoints: 32 }) });
 ```
+
+## 物理驱动的车模（`PhysicsCar`）
+
+把一辆车模（例如 glTF）按节点名绑定成完全由物理驱动的汽车：
+
+- 车身：刚体（凸包碰撞体，自动降低质心），由射线悬挂托起，所以加速会抬头、刹车会点头、转弯会侧倾
+- 车轮：悬挂、转向、滚动；刹车卡钳跟着转向和悬挂走，但不随车轮滚动；方向盘随转向角转动
+- 车门 / 引擎盖 / 后备箱：各是一个刚体，用铰链连在车身上。关闭时锁止，由马达开合。车门打开后自由摆动，急加速时会被甩上并重新锁止；引擎盖、后备箱靠马达顶在打开位置
+- 天窗 / 尾翼：滑动关节加马达，尾翼可以按车速自动升降；雨刮：往复摆动的铰链马达
+- 车灯：大灯（传入 `LightRig` 时每个大灯还有一盏随车走的聚光灯）、刹车灯（开大灯时微亮当尾灯用）、倒车灯
+
+```ts
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createPhysicsCar } from '@thunder/render';
+
+const gltf = await new GLTFLoader().loadAsync('car.glb');
+const car = createPhysicsCar(world, gltf.scene, {
+  forward: [0, 0, 1], // 模型里车头的方向（glTF 车模通常是 +Z，默认 -Z）
+  mass: 1250,
+  wheels: [
+    { node: 'Wheel_FL', caliper: 'Caliper_FL' }, // 前轮默认转向，后轮默认驱动
+    { node: 'Wheel_FR', caliper: 'Caliper_FR' },
+    { node: 'Wheel_RL' },
+    { node: 'Wheel_RR' },
+  ],
+  hinges: [
+    { node: 'Door_L', name: 'leftDoor', edge: 'front', angle: 70 }, // 铰链在前沿，向外打开
+    { node: 'Door_R', name: 'rightDoor', edge: 'front', angle: 70 },
+    { node: 'Hood', edge: 'rear', angle: 55 }, // 铰链在后沿，向上打开并保持
+    { node: 'Trunk', edge: 'front', angle: 60 },
+  ],
+  sliders: [
+    { node: 'Sunroof', direction: 'back', travel: 0.4 },
+    { node: 'Spoiler', direction: 'up', travel: 0.15, autoAbove: 16 }, // 超过 16 m/s 自动升起
+  ],
+  wipers: [{ node: 'Wiper_L', pivot: 'left', sweep: 85 }],
+  steeringWheel: { node: 'SteeringWheel', ratio: 8 },
+  lights: { head: ['Headlight_L', 'Headlight_R'], brake: ['BrakeLight'], rig: pipeline.lights },
+});
+pipeline.scene.add(car.root); // 模型已被移入 car.root
+
+// 输入（每步读取）与部件控制
+car.setInput({ throttle: 1, steer: -0.5, brake: 0, handbrake: false });
+car.toggle('leftDoor'); // 同样适用于 open / close；雨刮是启动 / 停止
+car.setHeadlights(true);
+car.part('Hood'); // 底层的 HingedPart / SlidingPart / WiperPart（可配合 isHingedPart 等类型守卫）
+
+// 每帧渲染前
+car.sync(alpha);
+```
+
+绑定规则：
+
+- 铰链轴与铰链点根据部件网格在车身坐标中的包围盒推算。`edge` 是铰链所在的边；侧面的竖直面板（车门）绕 up 轴转，水平面板（引擎盖、后备箱）绕 right 轴转，也可以用 `axis` 指定（例如剪刀门用 `edge: 'front', axis: 'right'`，鸥翼门用 `edge: 'top'`）
+- 打开方向自动取“远离车身中心”的一侧，`angle` 只需要给正值（度）
+- 车身和所有部件共用一个负数碰撞组，彼此之间不碰撞，但都会和外界碰撞
+- 车轮位置取车轮网格的中心，所以节点原点不在轮心也没关系；停稳后车轮正好落在模型里原来的位置
+- 部件的质量、开合速度、悬挂参数、驱动力 / 制动力、最大转向角都可以配置，详见 `PhysicsCarOptions`

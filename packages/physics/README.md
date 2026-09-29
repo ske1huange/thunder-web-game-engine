@@ -6,7 +6,7 @@ Thunder Physics —— 面向 HTML5 游戏的纯 TypeScript 3D 刚体物理引�
 npm install @thunder/physics
 ```
 
-产物：ESM（`dist/index.js`）、CommonJS（`dist/index.cjs`）、浏览器全局脚本（`dist/thunder-physics.global.js`，全局变量 `ThunderPhysics`）以及类型声明。零运行时依赖，`sideEffects: false`，打包工具会移除未使用的部分（只用 `World` + 基本形状约 29 KB gzip，全部功能约 48 KB gzip）。
+产物：ESM（`dist/index.js`）、CommonJS（`dist/index.cjs`）、浏览器全局脚本（`dist/thunder-physics.global.js`，全局变量 `ThunderPhysics`）以及类型声明。零运行时依赖，`sideEffects: false`，打包工具会移除未使用的部分（只用 `World` + 基本形状约 29 KB gzip，全部功能约 49 KB gzip）。
 
 ## 世界与模拟
 
@@ -45,6 +45,8 @@ const body = world.createBody({
   linearDamping: 0,
   angularDamping: 0.05,
   isBullet: false, // 高速物体：连续碰撞也检测动态物体
+  mass: 1200, // 可选：指定总质量（按比例缩放由密度算出的质量与惯性）
+  centerOfMassOffset: new Vec3(0, -0.3, 0), // 可选：质心偏移（车辆降低质心防侧翻）
 });
 
 // 一个刚体可以挂多个碰撞体（复合形状）
@@ -272,6 +274,7 @@ car.setBrake(0, 2); // 制动力（N）
 car.forwardSpeed; // 车速（m/s）
 car.wheels[0].isInContact; // 接地、悬挂长度、打滑（skidInfo < 1）等状态
 car.getWheelTransform(0, position, rotation, alpha); // 渲染车轮（含悬挂、转向、滚动与插值）
+car.getWheelTransform(0, position, rotation, alpha, false); // 不含滚动（刹车卡钳）
 ```
 
 - 悬挂：弹簧 + 压缩 / 回弹阻尼，以力的形式随子步积分（停车后可以正常休眠）
@@ -279,6 +282,48 @@ car.getWheelTransform(0, position, rotation, alpha); // 渲染车轮（含悬挂
 - 地面是动态刚体时（例如跷跷板、平板车），反作用力施加在地面刚体上
 
 更一般地，任何实现了 `preStep(dt)` / `postStep(dt)` 的对象都可以用 `world.addController(...)` 在每步前后执行（风场、浮力等）。
+
+### 车身可动部件
+
+车门、引擎盖、后备箱、天窗、尾翼、雨刮都是独立的动态刚体，用关节连在车身上，完全由物理驱动：会被障碍物挡住，急加速时没关的车门会被甩上并重新锁止。
+
+```ts
+import { VehicleParts } from '@thunder/physics';
+
+const parts = new VehicleParts(world); // 注册为世界控制器，每步更新部件状态
+
+// 铰链部件：关闭时锁止（限位 [0, 0]），打开 / 关闭由马达推动
+const door = parts.addHinged({
+  name: 'door',
+  chassis,
+  body: doorBody, // 与车身同碰撞组（负数 group）以免互相碰撞
+  anchor: new Vec3(-0.9, 1, -0.6), // 铰链点（世界坐标）
+  axis: new Vec3(0, 1, 0),
+  openAngle: -1.2, // 打开角度（弧度，正负决定方向）
+  holdOpen: 'free', // 'free'：打开后自由摆动，回到关闭位置时自动锁上；'hold'：马达顶住（引擎盖）
+});
+door.open(); // state: 'closed' → 'opening' → 'open'
+door.close(); // 'closing' → 'closed'（锁止）
+door.angle; // 当前角度；door.openness 为 0..1
+
+// 滑动部件（天窗、升降尾翼）
+const sunroof = parts.addSliding({
+  name: 'sunroof',
+  chassis,
+  body: roofBody,
+  anchor: roofBody.position,
+  axis: new Vec3(0, 0, 1),
+  travel: 0.45,
+});
+
+// 雨刮：在 [0, sweep] 之间往复，停止后回到停放位置
+const wiper = parts.addWiper({ name: 'wiper', chassis, body: blade, anchor, axis, sweep: 1.4 });
+wiper.start();
+
+parts.toggle('door'); // 按名称切换
+```
+
+在 three.js 中按 glTF 节点名自动绑定整辆车（车身、车轮、卡钳、方向盘、部件、车灯）见 `@thunder/render` 的 `PhysicsCar`。
 
 ## 在 Web Worker 中运行
 

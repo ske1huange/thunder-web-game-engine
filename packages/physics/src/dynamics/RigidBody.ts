@@ -39,6 +39,10 @@ export interface RigidBodyOptions {
   isBullet?: boolean;
   /** 是否对该物体做连续碰撞检测，默认 true */
   enableCCD?: boolean;
+  /** 总质量（kg）：设置后按比例缩放由密度算出的质量与惯性张量 */
+  mass?: number;
+  /** 质心偏移（局部坐标，叠加在由碰撞体算出的质心上），例如降低车辆质心以免侧翻 */
+  centerOfMassOffset?: Readonly<Vec3>;
   userData?: unknown;
 }
 
@@ -87,6 +91,10 @@ export class RigidBody {
   userData: unknown;
 
   readonly colliders: Collider[] = [];
+  /** 质量覆盖（null 表示按碰撞体密度计算） */
+  private massOverride: number | null = null;
+  /** 质心偏移（局部坐标） */
+  readonly centerOfMassOffset = new Vec3();
 
   // ---- 内部状态 ----
   /** @internal */ awakeFlag: boolean;
@@ -129,6 +137,8 @@ export class RigidBody {
     this.isBullet = options.isBullet ?? false;
     this.enableCCD = options.enableCCD ?? true;
     this.userData = options.userData;
+    if (options.mass !== undefined && options.mass > 0) this.massOverride = options.mass;
+    if (options.centerOfMassOffset) this.centerOfMassOffset.copy(options.centerOfMassOffset);
     if (this._type === 'static') {
       this.linearVelocity.setZero();
       this.angularVelocity.setZero();
@@ -247,6 +257,15 @@ export class RigidBody {
       this.inertiaLocal.add(tmpInertia);
     }
 
+    // 质量覆盖：质量与惯性张量按比例缩放（质量分布不变）
+    if (this.massOverride !== null && totalMass > 0) {
+      const scale = this.massOverride / totalMass;
+      this.inertiaLocal.scale(scale);
+      totalMass = this.massOverride;
+    }
+    // 质心偏移：只移动质心，惯性张量保持不变（与 Unity / Jolt 的做法相同）
+    this.localCenter.add(this.centerOfMassOffset);
+
     if (totalMass > 0) {
       this.mass = totalMass;
       this.invMass = 1 / totalMass;
@@ -288,6 +307,18 @@ export class RigidBody {
     }
     this.maxExtent = Number.isFinite(maxExtent) ? maxExtent : 0;
     this.minExtent = minExtent;
+  }
+
+  /** 设置总质量（kg），null 恢复按密度计算 */
+  setMass(mass: number | null): void {
+    this.massOverride = mass !== null && mass > 0 ? mass : null;
+    this.updateMassProperties();
+  }
+
+  /** 设置质心偏移（局部坐标） */
+  setCenterOfMassOffset(offset: Readonly<Vec3>): void {
+    this.centerOfMassOffset.copy(offset);
+    this.updateMassProperties();
   }
 
   /** @internal */

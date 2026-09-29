@@ -15,6 +15,8 @@ export interface DemoContext {
   setInfo(text: string): void;
   /** 场景相机（只读使用，例如按相机朝向移动角色） */
   camera: THREE.PerspectiveCamera;
+  /** 右下角的按钮面板容器（切换 demo 时自动清空） */
+  panel: HTMLElement;
 }
 
 /** 每个固定步之前调用 */

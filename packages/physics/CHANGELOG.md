@@ -24,7 +24,9 @@
 ### 游戏功能
 
 - `CharacterController`：碰撞并滑动、坡度限制、自动上台阶、贴地、移动平台、推动物体、穿透恢复
-- `RaycastVehicle`：射线悬挂、轮胎摩擦与打滑、转向 / 驱动 / 制动、防侧翻
+- `RaycastVehicle`：射线悬挂、轮胎摩擦与打滑、转向 / 驱动 / 制动、防侧翻；`getWheelTransform` 可不含滚动（刹车卡钳）
+- `VehicleParts`：车身可动部件 `HingedPart`（车门 / 引擎盖 / 后备箱：锁止、马达开合、自由摆动或保持打开）、`SlidingPart`（天窗 / 尾翼）、`WiperPart`（雨刮）
+- `RigidBody` 选项 `mass`（覆盖总质量）与 `centerOfMassOffset`（质心偏移），以及 `setMass` / `setCenterOfMassOffset`
 - `World.addController`：每步前后的自定义逻辑
 - 查询：射线、AABB、形状重叠、形状投射，支持过滤
 - 事件：碰撞开始 / 结束、传感器进入 / 离开、休眠 / 唤醒

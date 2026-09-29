@@ -226,6 +226,48 @@ kbd {
   display: none;
 }
 
+/* demo 自定义的按钮面板（右下角） */
+#panel {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  background: rgba(22, 26, 34, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  max-width: 260px;
+}
+
+#panel:empty {
+  display: none;
+}
+
+#panel button {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+#panel button kbd {
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+#panel button:hover,
+#panel button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 @media (max-width: 760px) {
   body {
     flex-direction: column;

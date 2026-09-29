@@ -18,14 +18,20 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "size": "node scripts/size.mjs",
+    "check:packages": "node scripts/check-packages.mjs",
+    "docs:api": "typedoc"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.19.0",
+    "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
     "prettier": "^3.9.9",
+    "publint": "^0.3.24",
+    "typedoc": "^0.28.20",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.1",
     "vitest": "^5.0.2"

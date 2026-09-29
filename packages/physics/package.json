@@ -10,9 +10,26 @@
     "collision-detection",
     "html5",
     "game",
-    "typescript"
+    "typescript",
+    "trimesh",
+    "heightfield",
+    "character-controller",
+    "vehicle",
+    "ragdoll",
+    "web-worker",
+    "three"
   ],
   "license": "MIT",
+  "author": "ske1huange",
+  "homepage": "https://github.com/ske1huange/thunder-web-game-engine/tree/main/packages/physics#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ske1huange/thunder-web-game-engine.git",
+    "directory": "packages/physics"
+  },
+  "bugs": {
+    "url": "https://github.com/ske1huange/thunder-web-game-engine/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
@@ -28,12 +45,16 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
-    }
+    },
+    "./package.json": "./package.json"
   },
   "unpkg": "./dist/thunder-physics.global.js",
   "files": [
     "dist",
-    "README.md"
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
@@ -42,5 +63,12 @@
   "devDependencies": {
     "tsup": "^8.5.1",
     "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

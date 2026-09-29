@@ -1,0 +1,14 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Thunder 引擎 API",
+  "entryPoints": ["packages/physics/src/index.ts", "packages/render/src/index.ts"],
+  "tsconfig": "tsconfig.typedoc.json",
+  "out": "docs/api",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "sort": ["kind", "instance-first", "alphabetical"],
+  "validation": { "notExported": false, "invalidLink": true, "notDocumented": false },
+  "treatWarningsAsErrors": false
+}

@@ -70,15 +70,40 @@ pipeline.render(controls.target, alpha);
 
 详见 [packages/render/README.md](packages/render/README.md)。演示站左上角可以切换光照与调色预设，「光源与调色」demo 展示了绑定在刚体上的点光源与聚光灯。
 
-## 快速开始
+## 安装
+
+```bash
+npm install @thunder/physics                  # 物理引擎，零依赖
+npm install @thunder/render three             # 可选：three.js 渲染层
+```
+
+不使用打包工具时，也可以直接引用浏览器脚本（全局变量 `ThunderPhysics`）：
+
+```html
+<script src="https://unpkg.com/@thunder/physics/dist/thunder-physics.global.js"></script>
+```
+
+## 开发
 
 ```bash
 pnpm install
-pnpm dev          # 启动演示站 http://localhost:5173
-pnpm test         # 单元测试 + 物理行为测试
-pnpm build        # 构建 packages/physics 与 packages/render（dist/）
-pnpm bench        # 基准测试
+pnpm dev             # 启动演示站 http://localhost:5173
+pnpm test            # 单元测试 + 物理行为测试
+pnpm build           # 构建 packages/physics 与 packages/render（dist/）
+pnpm bench           # 基准测试
+pnpm size            # 包体积检查（gzip 预算）
+pnpm check:packages  # 发布前检查（publint + npm pack 预演）
+pnpm docs:api        # 生成 API 文档到 docs/api
 ```
+
+## 发布到 npm
+
+1. 在 npm 上创建（或确认拥有）`thunder` 组织，使 `@thunder/*` 作用域可以发布；
+2. 生成 npm 自动化令牌（Automation token），在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加为 `NPM_TOKEN`；
+3. 更新 `packages/*/package.json` 的 `version` 与 `CHANGELOG.md`，合并到 main；
+4. 打标签并推送：`git tag v0.1.0 && git push origin v0.1.0`。
+
+[Release 工作流](.github/workflows/release.yml) 会重新运行检查、构建，确认标签与包版本一致后执行 `pnpm publish`（带 npm provenance 来源证明，`workspace:` 依赖会被替换为实际版本号）。
 
 演示站操作：左键拖拽抓取物体，右键 / 滚轮调整视角，空格发射小球，`P` 暂停，`N` 单步，`R` 重置，`D` 调试线框；左上角可切换光照与调色预设。
 

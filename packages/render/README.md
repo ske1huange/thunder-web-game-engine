@@ -4,6 +4,10 @@ Thunder Render —— 基于 three.js 的渲染层：多光源与阴影、后期
 
 依赖（peerDependencies）：`three >= 0.170`、`@thunder/physics`。
 
+```bash
+npm install @thunder/render @thunder/physics three
+```
+
 ## 渲染管线
 
 ```ts

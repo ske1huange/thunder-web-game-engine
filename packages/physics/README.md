@@ -2,7 +2,11 @@
 
 Thunder Physics —— 面向 HTML5 游戏的纯 TypeScript 3D 刚体物理引擎，零运行时依赖。
 
-产物：ESM（`dist/index.js`）、CommonJS（`dist/index.cjs`）、浏览器全局脚本（`dist/thunder-physics.global.js`，全局变量 `ThunderPhysics`）以及类型声明。
+```bash
+npm install @thunder/physics
+```
+
+产物：ESM（`dist/index.js`）、CommonJS（`dist/index.cjs`）、浏览器全局脚本（`dist/thunder-physics.global.js`，全局变量 `ThunderPhysics`）以及类型声明。零运行时依赖，`sideEffects: false`，打包工具会移除未使用的部分（只用 `World` + 基本形状约 29 KB gzip，全部功能约 48 KB gzip）。
 
 ## 世界与模拟
 

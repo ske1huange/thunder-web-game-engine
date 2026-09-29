@@ -1,0 +1,48 @@
+name: Release
+
+# 推送形如 v0.1.0 的标签时发布到 npm。
+# 需要在仓库 Settings → Secrets and variables → Actions 中添加 NPM_TOKEN（npm 自动化令牌，
+# 且该令牌所属账号对 @thunder 作用域有发布权限）。
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # npm provenance（发布来源证明）需要 OIDC 令牌
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm size
+      - run: pnpm check:packages
+      - name: 检查标签与包版本一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for dir in packages/physics packages/render; do
+            version=$(node -p "require('./$dir/package.json').version")
+            if [ "$version" != "$tag" ]; then
+              echo "$dir 的版本 $version 与标签 $GITHUB_REF_NAME 不一致"; exit 1
+            fi
+          done
+      # pnpm publish 会把 workspace: 协议替换为实际版本号
+      - run: pnpm -r --filter "./packages/*" publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

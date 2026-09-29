@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "paths": {
+      "@thunder/physics": ["./packages/physics/src/index.ts"]
+    }
+  },
+  "include": ["packages/physics/src", "packages/render/src"]
+}
